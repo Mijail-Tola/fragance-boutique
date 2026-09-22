@@ -34,9 +34,6 @@ function ProductoDetalle({ id }: { id: string }) {
   const addItem = useCartStore((state) => state.addItem)
   const [productosRelacionados, setProductosRelacionados] = useState<any[]>([])
   const [ordenFiltro, setOrdenFiltro] = useState<string>('destacados') 
-  
-  // ESTADO PARA ABRIR LA IMAGEN EN PANTALLA COMPLETA
-  const [mostrarModal, setMostrarModal] = useState(false)
 
   useEffect(() => {
     async function fetchProductoYRelacionados() {
@@ -97,33 +94,21 @@ function ProductoDetalle({ id }: { id: string }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
           
-          {/* ZONA IZQUIERDA: GALERÍA DE IMÁGENES */}
-          <div className="flex flex-col md:flex-row-reverse gap-4">
+          {/* ZONA IZQUIERDA: GALERÍA DE IMÁGENES (CARRUSEL INLINE) */}
+          <div className="flex flex-col gap-4">
             
-            {/* Imagen Principal con Modal integrado */}
-            <div 
-              onClick={() => setMostrarModal(true)}
-              className="flex-1 bg-gray-50 p-6 md:p-10 flex items-center justify-center relative h-[350px] md:h-[600px] overflow-hidden group cursor-zoom-in"
-            >
-               <Image 
+            {/* Contenedor Principal de la Imagen con Flechas */}
+            <div className="relative w-full h-[350px] md:h-[550px] bg-gray-50 rounded-sm overflow-hidden flex items-center justify-center">
+              <Image 
                 src={imagenActiva || producto.imagen_url} 
                 alt={producto.nombre} 
                 fill
                 priority 
                 sizes="(max-width: 768px) 100vw, 50vw"
-                className={`object-contain transition-transform duration-500 ease-in-out p-8 ${sinStock ? 'opacity-50' : 'hidden md:block group-hover:scale-125'}`}
+                className={`object-contain p-4 md:p-8 transition-opacity duration-300 ${sinStock ? 'opacity-50' : ''}`}
                 unoptimized
               />
-              {/* Imagen dedicada para celular, sin efecto hover que cause saltos */}
-              <Image 
-                src={imagenActiva || producto.imagen_url} 
-                alt={producto.nombre} 
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className={`object-contain p-4 md:hidden ${sinStock ? 'opacity-50' : ''}`}
-                unoptimized
-              />
-
+              
               {sinStock && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-[2px]">
                   <span className="font-bold text-gray-900 tracking-widest text-2xl px-6 py-4 bg-white/90 shadow-sm">
@@ -131,27 +116,58 @@ function ProductoDetalle({ id }: { id: string }) {
                   </span>
                 </div>
               )}
+
+              {/* Flechas de Navegación sobre la imagen */}
+              {producto.galeria && producto.galeria.length > 1 && (
+                <>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const currentIndex = producto.galeria.indexOf(imagenActiva || producto.imagen_url);
+                      const prevIndex = (currentIndex - 1 + producto.galeria.length) % producto.galeria.length;
+                      setImagenActiva(producto.galeria[prevIndex]);
+                    }}
+                    className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 text-black rounded-full shadow-md hover:bg-black hover:text-white transition-colors z-10"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const currentIndex = producto.galeria.indexOf(imagenActiva || producto.imagen_url);
+                      const nextIndex = (currentIndex + 1) % producto.galeria.length;
+                      setImagenActiva(producto.galeria[nextIndex]);
+                    }}
+                    className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 text-black rounded-full shadow-md hover:bg-black hover:text-white transition-colors z-10"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                  </button>
+                </>
+              )}
             </div>
             
-            {/* Miniaturas */}
+            {/* Miniaturas Inferiores Estilo Botón */}
             {producto.galeria && producto.galeria.length > 1 && (
-              <div className="flex md:flex-col gap-4 overflow-x-auto md:w-24 shrink-0 pb-2 md:pb-0">
-                {producto.galeria.map((img: string, idx: number) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => setImagenActiva(img)}
-                    className={`relative h-24 w-24 md:w-full md:h-28 overflow-hidden shrink-0 transition-all duration-300 ${imagenActiva === img || (!imagenActiva && idx === 0) ? 'border-b-2 border-black opacity-100' : 'opacity-50 hover:opacity-100'}`}
-                  >
-                    <Image 
-                      src={img} 
-                      alt={`Miniatura ${idx + 1}`} 
-                      fill 
-                      sizes="100px"
-                      className="object-cover bg-gray-50 p-2" 
-                      unoptimized
-                    />
-                  </button>
-                ))}
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x">
+                {producto.galeria.map((img: string, idx: number) => {
+                  const isActive = (imagenActiva || producto.imagen_url) === img;
+                  return (
+                    <button 
+                      key={idx} 
+                      onClick={() => setImagenActiva(img)}
+                      className={`relative h-20 w-20 md:h-24 md:w-24 shrink-0 rounded-sm overflow-hidden snap-center transition-all duration-200 border-2 ${isActive ? 'border-black opacity-100' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                    >
+                      <Image 
+                        src={img} 
+                        alt={`Miniatura ${idx + 1}`} 
+                        fill 
+                        sizes="100px"
+                        className="object-cover bg-gray-50" 
+                        unoptimized
+                      />
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -304,35 +320,6 @@ function ProductoDetalle({ id }: { id: string }) {
           </div>
         )}
       </div>
-
-      {/* MODAL DE IMAGEN A PANTALLA COMPLETA */}
-      {mostrarModal && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 md:p-12 animate-in fade-in duration-200"
-          onClick={() => setMostrarModal(false)}
-        >
-          {/* Botón de Cerrar (X) */}
-          <button 
-            className="absolute top-4 right-4 md:top-8 md:right-8 text-white hover:text-gray-400 p-2"
-            onClick={() => setMostrarModal(false)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-10 h-10">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          {/* Contenedor de la Imagen Gigante */}
-          <div className="relative w-full h-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            <Image 
-              src={imagenActiva || producto.imagen_url} 
-              alt={producto.nombre} 
-              fill
-              className="object-contain"
-              unoptimized
-            />
-          </div>
-        </div>
-      )}
     </main>
   )
 }
