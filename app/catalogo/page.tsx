@@ -98,9 +98,11 @@ const ProductoCard = ({ producto }: { producto: any }) => {
           <h4 className="font-semibold text-gray-900 text-sm mb-2 group-hover:text-rose-600 transition-colors leading-snug">
             {producto.nombre}
           </h4>
-          <p className={`text-base font-bold mt-auto ${sinStock ? 'text-gray-400' : 'text-gray-900'}`}>
-            {precioActual}
-          </p>
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <span className={`inline-block text-sm md:text-base font-bold px-3 py-1.5 rounded-sm tracking-wide ${sinStock ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 text-gray-900 hover:bg-gray-200 transition-colors'}`}>
+              {precioActual}
+            </span>
+          </div>
         </div>
       </Link>
 
@@ -125,10 +127,14 @@ const ProductoCard = ({ producto }: { producto: any }) => {
 // PÁGINA PRINCIPAL DEL CATÁLOGO
 export default function CatalogoPage() {
   const [productos, setProductos] = useState<any[]>([])
-  const [busquedaFiltro, setBusquedaFiltro] = useState<string>('') // NUEVO ESTADO PARA LA BÚSQUEDA
+  const [busquedaFiltro, setBusquedaFiltro] = useState<string>('') 
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('Todas')
   const [marcaFiltro, setMarcaFiltro] = useState<string>('Todas')
   const [ordenFiltro, setOrdenFiltro] = useState<string>('destacados') 
+  
+  // ESTADOS DE LA PAGINACIÓN
+  const [paginaActual, setPaginaActual] = useState(1)
+  const PRODUCTOS_POR_PAGINA = 12 // Muestra 12 perfumes por página
 
   useEffect(() => {
     async function fetchProductos() {
@@ -139,18 +145,22 @@ export default function CatalogoPage() {
     fetchProductos()
   }, [])
 
+  // Si el usuario cambia algún filtro, lo regresamos a la página 1 automáticamente
+  useEffect(() => {
+    setPaginaActual(1)
+  }, [busquedaFiltro, categoriaFiltro, marcaFiltro, ordenFiltro])
+
   const categoriasList = Array.from(new Set(productos.map(p => p.categoria).filter(Boolean)))
   const marcasList = Array.from(new Set(productos.map(p => p.marca).filter(Boolean)))
 
   const getCountCategoria = (cat: string) => productos.filter(p => p.categoria === cat).length
   const getCountMarca = (marca: string) => productos.filter(p => p.marca === marca).length
 
-  // PASO 1: Filtrar (Ahora incluye el término de búsqueda)
+  // FILTRADO
   let productosFiltrados = productos.filter(producto => {
     const pasaCategoria = categoriaFiltro === 'Todas' || producto.categoria === categoriaFiltro
     const pasaMarca = marcaFiltro === 'Todas' || producto.marca === marcaFiltro
     
-    // Convertimos a minúsculas para que la búsqueda no sea sensible a mayúsculas
     const termino = busquedaFiltro.toLowerCase().trim()
     const pasaBusqueda = termino === '' || 
                          producto.nombre.toLowerCase().includes(termino) || 
@@ -167,7 +177,7 @@ export default function CatalogoPage() {
     return Number(producto.precio) || 0;
   }
 
-  // PASO 2: Ordenar
+  // ORDENAMIENTO (Aquí estaba el famoso switch)
   let productosOrdenados = [...productosFiltrados];
   switch (ordenFiltro) {
     case 'destacados':
@@ -190,6 +200,13 @@ export default function CatalogoPage() {
       productosOrdenados.sort((a, b) => b.nombre.localeCompare(a.nombre));
       break;
   }
+
+  // PAGINACIÓN: Cortar la lista de productos para mostrar solo los de la página actual
+  const totalPaginas = Math.ceil(productosOrdenados.length / PRODUCTOS_POR_PAGINA)
+  const productosPaginados = productosOrdenados.slice(
+    (paginaActual - 1) * PRODUCTOS_POR_PAGINA, 
+    paginaActual * PRODUCTOS_POR_PAGINA
+  )
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -215,8 +232,22 @@ export default function CatalogoPage() {
 
             <div>
               <h4 className="font-bold text-gray-800 tracking-wider uppercase text-sm">Categoría</h4>
-              <div className="w-8 h-0.5 bg-gray-300 mt-3 mb-2"></div>
-              <div className="flex flex-col">
+              <div className="w-8 h-0.5 bg-gray-300 mt-3 mb-5 md:mb-2"></div>
+              
+              {/* VISTA CELULAR: Menú desplegable compacto (Solo se ve en móviles) */}
+              <select 
+                className="block md:hidden w-full border border-gray-300 rounded-md p-3 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-700 cursor-pointer mb-6"
+                value={categoriaFiltro}
+                onChange={(e) => setCategoriaFiltro(e.target.value)}
+              >
+                <option value="Todas">Todos ({productos.length})</option>
+                {categoriasList.map(cat => (
+                  <option key={cat} value={cat}>{cat} ({getCountCategoria(cat)})</option>
+                ))}
+              </select>
+
+              {/* VISTA PC: Lista tradicional (Solo se ve en computadoras) */}
+              <div className="hidden md:flex flex-col">
                 <button onClick={() => setCategoriaFiltro('Todas')} className={`flex justify-between items-center py-3 border-b border-gray-100 last:border-0 transition-colors ${categoriaFiltro === 'Todas' ? 'text-gray-900 font-bold' : 'text-gray-500 hover:text-gray-800'}`}>
                   <span>Todos</span><span className="text-xs">({productos.length})</span>
                 </button>
@@ -235,15 +266,11 @@ export default function CatalogoPage() {
           
           {/* BARRA DE BÚSQUEDA PREMIUM */}
           <div className="group flex w-full bg-white rounded-xl shadow-[0_2px_10px_rgb(0,0,0,0.04)] border border-gray-200 mb-8 overflow-hidden focus-within:border-black focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-            
-            {/* Ícono interno izquierdo */}
             <div className="pl-6 flex items-center justify-center text-gray-400 group-focus-within:text-black transition-colors">
               <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            
-            {/* Campo de texto más amplio */}
             <input 
               type="text" 
               placeholder="¿Qué perfume estás buscando hoy?" 
@@ -251,12 +278,9 @@ export default function CatalogoPage() {
               onChange={(e) => setBusquedaFiltro(e.target.value)}
               className="flex-1 px-4 py-4 md:py-5 outline-none text-gray-800 placeholder-gray-400 text-base md:text-lg bg-transparent"
             />
-            
-            {/* Botón de acción destacado */}
             <button className="bg-black text-white px-8 md:px-12 flex items-center justify-center hover:bg-[#e3000f] hover:text-white transition-colors uppercase font-bold tracking-widest text-xs md:text-sm">
               Buscar
             </button>
-            
           </div>
 
           {/* BARRA SUPERIOR DE ORDENAMIENTO */}
@@ -282,13 +306,70 @@ export default function CatalogoPage() {
             </div>
           </div>
 
-          {/* GRID DE PRODUCTOS (4 Columnas para un diseño más compacto) */}
+          {/* GRID DE PRODUCTOS */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10">
-            {productosOrdenados.map((producto) => (
+            {/* AQUÍ ESTÁ LA MAGIA: Solo renderiza los productos de la página actual */}
+            {productosPaginados.map((producto) => (
               <ProductoCard key={producto.id} producto={producto} />
             ))}
           </div>
 
+          {/* CONTROLES DE PAGINACIÓN */}
+          {totalPaginas > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-16 border-t pt-8">
+              {/* Botón Anterior */}
+              <button 
+                onClick={() => {
+                  setPaginaActual(p => Math.max(1, p - 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' }); // Sube la pantalla al cambiar
+                }}
+                disabled={paginaActual === 1}
+                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-black hover:border-black disabled:opacity-30 transition-colors"
+              >
+                &lt;
+              </button>
+              
+              {/* Números de página */}
+              {Array.from({ length: totalPaginas }).map((_, i) => {
+                const pagina = i + 1;
+                if (pagina === 1 || pagina === totalPaginas || (pagina >= paginaActual - 1 && pagina <= paginaActual + 1)) {
+                  return (
+                    <button 
+                      key={pagina}
+                      onClick={() => {
+                        setPaginaActual(pagina);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-colors ${
+                        paginaActual === pagina 
+                        ? 'bg-black text-white border-black shadow-md' 
+                        : 'border border-gray-300 text-gray-700 hover:border-black'
+                      }`}
+                    >
+                      {pagina}
+                    </button>
+                  );
+                } else if (pagina === paginaActual - 2 || pagina === paginaActual + 2) {
+                  return <span key={pagina} className="w-6 text-center text-gray-400">...</span>;
+                }
+                return null;
+              })}
+
+              {/* Botón Siguiente */}
+              <button 
+                onClick={() => {
+                  setPaginaActual(p => Math.min(totalPaginas, p + 1));
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                disabled={paginaActual === totalPaginas}
+                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:text-black hover:border-black disabled:opacity-30 transition-colors"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+
+          {/* MENSAJE SI NO HAY RESULTADOS */}
           {productosOrdenados.length === 0 && (
             <div className="text-center py-20 bg-white rounded-lg border border-gray-100 shadow-sm mt-8">
               <p className="text-gray-500 text-lg mb-4">No encontramos productos que coincidan con tu búsqueda.</p>
