@@ -9,25 +9,6 @@ export default function CartSidebar() {
 
   const total = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
 
-  // 🪄 LA MAGIA DE WHATSAPP
-  const enviarPedidoWhatsApp = () => {
-    const numeroWhatsApp = "591XXXXXXXX" // <-- ¡CAMBIA ESTO POR TU NÚMERO (Ej: 59178901234)!
-    
-    let mensaje = `¡Hola Fragance Boutique! 🌟\nQuiero realizar el siguiente pedido:\n\n`
-    
-    items.forEach(item => {
-      const tamanoTxt = item.tamano ? `(${item.tamano})` : ''
-      const subtotal = item.precio * item.cantidad
-      mensaje += `🛍️ *${item.nombre}* ${tamanoTxt}\n   ${item.cantidad} x ${item.precio}Bs = ${subtotal}Bs\n\n`
-    })
-    
-    mensaje += `💰 *Total a pagar: ${total}Bs*\n\nQuedo atento(a) para coordinar el envío. 🚚`
-    
-    // Codificamos el texto para que los saltos de línea funcionen en la URL
-    const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`
-    window.open(url, '_blank')
-  }
-
   // Si el carrito está cerrado, no renderizamos el fondo oscuro
   if (!isOpen) return null
 
@@ -93,13 +74,17 @@ export default function CartSidebar() {
               <span className="font-bold text-gray-600 uppercase tracking-widest text-sm">Total</span>
               <span className="text-2xl font-bold text-gray-900">{total} Bs.</span>
             </div>
-            <button 
-              onClick={enviarPedidoWhatsApp}
-              className="w-full bg-[#25D366] text-white py-4 rounded font-bold uppercase tracking-widest hover:bg-[#20b858] transition shadow-lg flex items-center justify-center gap-2"
+            
+            {/* AQUÍ ESTÁ LA MAGIA: Ahora es un Link que te lleva a la pasarela completa y cierra la barra lateral */}
+            <Link 
+              href="/carrito"
+              onClick={toggleCart}
+              className="w-full bg-black text-white py-4 rounded-sm font-bold uppercase tracking-widest hover:bg-[#e3000f] transition shadow-lg flex items-center justify-center gap-2"
             >
-              <span>Pedir por WhatsApp</span>
-            </button>
-            <p className="text-[10px] text-gray-400 text-center mt-3 uppercase tracking-wider">Pago al entregar / Transferencia</p>
+              Iniciar Pago Seguro
+            </Link>
+            
+            <p className="text-[10px] text-gray-400 text-center mt-3 uppercase tracking-wider">Pago Seguro por QR / Transferencia</p>
           </div>
         )}
       </div>

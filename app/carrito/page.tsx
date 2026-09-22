@@ -114,8 +114,10 @@ export default function CarritoPage() {
       
       <div className="bg-white border-b border-gray-200 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <h1 className="text-3xl font-serif text-gray-900 mb-2">Finalizar Compra</h1>
-          <p className="text-sm text-gray-500 uppercase tracking-widest">
+          <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-widest text-gray-900 mb-2">
+            FINALIZAR COMPRA
+          </h1>
+          <p className="text-xs md:text-sm text-gray-500 uppercase tracking-widest">
             {mostrarQR ? 'Paso 2: Pago Seguro' : 'Paso 1: Detalles de Envío'}
           </p>
         </div>
@@ -239,19 +241,29 @@ export default function CarritoPage() {
                 </form>
               ) : (
                 <div className="text-center animate-in fade-in zoom-in duration-500">
-                  <div className="bg-green-50 border border-green-200 text-green-800 p-3 mb-6 font-medium text-sm">
-                    Orden #{codigoOrden} registrada.
+                  <div className="bg-green-50 border-l-4 border-green-500 text-green-800 p-4 mb-6 text-left shadow-sm">
+                    <p className="font-bold">¡Orden #{codigoOrden} registrada con éxito!</p>
+                    <p className="text-sm mt-1">Por favor, realiza el pago para coordinar el envío.</p>
                   </div>
-                  <p className="text-gray-600 mb-4 text-sm">Escanea el código QR desde tu app bancaria.</p>
                   
-                  <div className="bg-white p-4 inline-block mb-6 border border-gray-200 shadow-sm">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QR de Pago" className="w-48 h-48 mx-auto" />
+                  <h4 className="font-bold text-gray-900 mb-2 uppercase tracking-wide">Paso final: Pago Seguro</h4>
+                  <p className="text-gray-600 mb-6 text-sm">Escanea este código QR desde tu aplicación bancaria por el monto exacto de <span className="font-bold text-black">Bs. {total}</span>.</p>
+                  
+                  <div className="bg-white p-6 inline-block mb-8 border-2 border-dashed border-gray-300 rounded-lg shadow-sm">
+                    {/* Reemplaza esta URL por la ruta de tu propio QR, ej: "/mi-qr.jpg" */}
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" 
+                      alt="QR de Pago Fragance Boutique" 
+                      className="w-48 h-48 mx-auto" 
+                    />
+                    <p className="text-xs text-gray-400 mt-4 font-medium tracking-widest uppercase">Fragance Boutique SRL</p>
                   </div>
 
-                  <button onClick={enviarAWhatsApp} className="w-full bg-[#25D366] text-white py-4 font-bold text-lg hover:bg-green-600 transition flex items-center justify-center gap-2 shadow-md">
+                  <button onClick={enviarAWhatsApp} className="w-full bg-[#25D366] text-white py-4 font-bold text-lg hover:bg-green-600 transition flex items-center justify-center gap-3 shadow-lg rounded-md">
                     <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.656.69 5.2 1.996 7.458L.357 24l4.675-1.57c2.158 1.155 4.596 1.764 7.001 1.764 6.646 0 12.03-5.385 12.03-12.03S18.676 0 12.031 0zm0 22.215c-2.25 0-4.453-.604-6.388-1.751l-.458-.278-3.324 1.116.885-3.24-.306-.487C1.258 15.422.585 13.76.585 12.031c0-6.323 5.143-11.466 11.446-11.466 6.324 0 11.446 5.143 11.446 11.466s-5.122 11.466-11.446 11.466zM17.58 14.5c-.302-.15-1.785-.882-2.062-.982-.277-.101-.48-.15-.683.15-.203.303-.781.982-.958 1.183-.176.202-.353.226-.655.076-2.14-1.07-3.415-2.22-4.664-4.385-.175-.302-.018-.466.133-.616.136-.136.302-.353.453-.53.15-.176.203-.302.302-.504.101-.202.05-.378-.025-.53-.075-.15-.683-1.644-.935-2.25-.246-.593-.496-.513-.683-.521-.176-.009-.378-.009-.581-.009-.202 0-.53.076-.807.378-.278.303-1.058 1.034-1.058 2.522 0 1.488 1.084 2.925 1.235 3.127.15.202 2.134 3.256 5.166 4.562 2.135.918 2.87.807 3.398.681.603-.143 1.785-.731 2.037-1.437.252-.706.252-1.311.176-1.437-.076-.126-.277-.202-.58-.353z"/></svg>
-                    Compra por WhatsApp
+                    Confirmar por WhatsApp
                   </button>
+                  <p className="text-xs text-gray-500 mt-4">Al hacer clic, se abrirá WhatsApp para que envíes la captura del pago a un asesor.</p>
                 </div>
               )}
             </div>

@@ -23,9 +23,19 @@ export default function Navbar() {
           Catálogo
         </Link>
         
-        {/* CARRITO: Botón un poco más compacto en móviles (px-3 py-1.5) */}
-        <Link href="/carrito" className="bg-rose-600 hover:bg-rose-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md font-medium transition flex items-center gap-2 text-sm md:text-base">
-          🛒 Carrito <span className="bg-white text-rose-600 px-2 rounded-full text-xs py-0.5">{totalItems}</span>
+        {/* CARRITO: Ícono minimalista con burbuja de notificación roja */}
+        <Link href="/carrito" className="relative text-white hover:text-rose-300 transition-colors p-2 flex items-center justify-center">
+          {/* Ícono de Bolsa de Compras */}
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 md:w-7 md:h-7">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          </svg>
+          
+          {/* Burbuja Roja de Notificación (Solo aparece si hay productos) */}
+          {totalItems > 0 && (
+            <span className="absolute -top-1 -right-1 bg-[#e3000f] text-white text-[10px] md:text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-sm">
+              {totalItems}
+            </span>
+          )}
         </Link>
       </div>
       
