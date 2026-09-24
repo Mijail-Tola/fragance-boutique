@@ -1,25 +1,48 @@
 "use client"
 
+import { usePathname } from 'next/navigation'
+
 export default function WhatsAppButton() {
-  const numeroWhatsApp = "59163993851" // Tu número
-  const mensaje = "Hola, me gustaría recibir asesoramiento personalizado sobre los perfumes. ✨"
-  const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`
+  const pathname = usePathname()
+
+  // 1. NUEVA REGLA DE VISIBILIDAD: Ocultar SOLO en el administrador y login secreto
+  if (pathname.startsWith('/admin') || pathname.startsWith('/portal-staff')) {
+    return null
+  }
+
+  // 2. NÚMERO DE TELÉFONO
+  const numeroWhatsApp = "59163993851" 
+  
+  // 3. MENSAJE DINÁMICO (Opcional pero recomendado)
+  // Si está en el carrito, el mensaje cambia sutilmente
+  const mensajeDefault = pathname === '/carrito' 
+    ? "Hola Fragance Boutique, necesito ayuda con mi carrito de compras."
+    : "Hola Fragance Boutique, quisiera hacer una consulta."
+  
+  const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensajeDefault)}`
 
   return (
-    <a 
-      href={url}
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:scale-110 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center group"
-      aria-label="Asesoramiento por WhatsApp"
-    >
-      <svg className="w-8 h-8 fill-current" viewBox="0 0 24 24">
-        <path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.656.69 5.2 1.996 7.458L.357 24l4.675-1.57c2.158 1.155 4.596 1.764 7.001 1.764 6.646 0 12.03-5.385 12.03-12.03S18.676 0 12.031 0zm0 22.215c-2.25 0-4.453-.604-6.388-1.751l-.458-.278-3.324 1.116.885-3.24-.306-.487C1.258 15.422.585 13.76.585 12.031c0-6.323 5.143-11.466 11.446-11.466 6.324 0 11.446 5.143 11.446 11.466s-5.122 11.466-11.446 11.466zM17.58 14.5c-.302-.15-1.785-.882-2.062-.982-.277-.101-.48-.15-.683.15-.203.303-.781.982-.958 1.183-.176.202-.353.226-.655.076-2.14-1.07-3.415-2.22-4.664-4.385-.175-.302-.018-.466.133-.616.136-.136.302-.353.453-.53.15-.176.203-.302.302-.504.101-.202.05-.378-.025-.53-.075-.15-.683-1.644-.935-2.25-.246-.593-.496-.513-.683-.521-.176-.009-.378-.009-.581-.009-.202 0-.53.076-.807.378-.278.303-1.058 1.034-1.058 2.522 0 1.488 1.084 2.925 1.235 3.127.15.202 2.134 3.256 5.166 4.562 2.135.918 2.87.807 3.398.681.603-.143 1.785-.731 2.037-1.437.252-.706.252-1.311.176-1.437-.076-.126-.277-.202-.58-.353z"/>
-      </svg>
-      {/* Tooltip que aparece al pasar el ratón */}
-      <span className="absolute right-16 bg-white text-gray-800 text-sm px-4 py-2 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold pointer-events-none">
-        ¿Necesitas asesoría?
-      </span>
-    </a>
+    <div className="fixed bottom-6 right-6 z-50 flex items-center justify-center group animate-in fade-in slide-in-from-bottom-5">
+      
+      {/* EFECTO DE PULSO (Brillo expansivo elegante) */}
+      <div className="absolute inset-0 bg-[#25D366] rounded-full animate-ping opacity-40 group-hover:opacity-75 transition-opacity duration-300"></div>
+      
+      {/* BOTÓN PRINCIPAL */}
+      <a 
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="relative flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-[0_4px_14px_0_rgba(37,211,102,0.39)] hover:bg-[#20bd5a] hover:scale-105 transition-all duration-300 z-10"
+        aria-label="Contactar por WhatsApp"
+      >
+        <svg 
+          viewBox="0 0 24 24" 
+          className="w-7 h-7 fill-current"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+        </svg>
+      </a>
+    </div>
   )
 }
