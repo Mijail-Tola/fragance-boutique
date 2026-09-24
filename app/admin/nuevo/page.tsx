@@ -10,7 +10,8 @@ const CATEGORIAS_PREDETERMINADAS = [
   "Árabe",
   "Perfumes de diseñador",
   "Perfumes de Cartera",
-  "Cosméticos"
+  "Cosméticos",
+  "Perfumes Nicho"
 ]
 
 const COLORES_INSIGNIAS = [
