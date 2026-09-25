@@ -6,97 +6,54 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
-// 🚀 COMPONENTE MÁGICO PERFECCIONADO: Scroll Nativo + Flechas Híbridas + Mix Blend Mode
+// 🚀 COMPONENTE MÁGICO: Vitrina Premium (Giro Infinito Autónomo)
 const CarruselInfinito = ({ items }: { items: any[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     const slider = scrollRef.current;
     if (!slider) return;
 
     let animationId: number;
-    let isInteracting = false;
-
-    // Velocidad de giro automático
-    const scrollSpeed = 0.5;
+    // ACUMULADOR DE ALTA PRECISIÓN: Evita que Safari/Chrome redondeen a cero
+    let exactScroll = slider.scrollLeft; 
+    
+    // Velocidad de giro (constante y elegante)
+    const scrollSpeed = 0.6;
 
     const play = () => {
-      // Si el usuario no está tocando ni pasando el ratón, avanzamos suavemente
-      if (!isInteracting && !isHovered) {
-        slider.scrollLeft += scrollSpeed;
+      exactScroll += scrollSpeed;
 
-        // Loop Infinito: Si pasamos la mitad de la pista, volvemos al inicio sin que se note
-        if (slider.scrollWidth > 0 && slider.scrollLeft >= slider.scrollWidth / 2) {
-          slider.scrollLeft = 0;
-        }
+      // Loop Infinito Matemático Invisible
+      if (slider.scrollWidth > 0 && exactScroll >= slider.scrollWidth / 2) {
+        exactScroll -= (slider.scrollWidth / 2);
       }
+      
+      // Obligamos al navegador a usar nuestra precisión
+      slider.scrollLeft = exactScroll;
       animationId = requestAnimationFrame(play);
     };
 
-    animationId = requestAnimationFrame(play);
-
-    // Eventos para pausar el giro automático en celular y reanudar al soltar
-    const handleTouchStart = () => { isInteracting = true; };
-    const handleTouchEnd = () => { isInteracting = false; };
-
-    slider.addEventListener('touchstart', handleTouchStart, { passive: true });
-    slider.addEventListener('touchend', handleTouchEnd);
-    slider.addEventListener('touchcancel', handleTouchEnd);
+    // Pequeño retraso para que las imágenes WebP carguen y el cálculo de ancho sea perfecto
+    setTimeout(() => {
+      animationId = requestAnimationFrame(play);
+    }, 300);
 
     return () => {
       cancelAnimationFrame(animationId);
-      if (slider) {
-        slider.removeEventListener('touchstart', handleTouchStart);
-        slider.removeEventListener('touchend', handleTouchEnd);
-        slider.removeEventListener('touchcancel', handleTouchEnd);
-      }
     };
-  }, [isHovered]);
-
-  // Funciones para las flechas manuales (Visibles en PC)
-  const scrollManual = (direccion: 'izquierda' | 'derecha') => {
-    if (scrollRef.current) {
-      const scrollAmount = window.innerWidth < 768 ? 150 : 300; 
-      scrollRef.current.scrollBy({
-        left: direccion === 'derecha' ? scrollAmount : -scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
+  }, []);
 
   return (
-    <div 
-      className="relative flex w-full overflow-hidden group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="relative flex w-full overflow-hidden">
       {/* Sombras Laterales Difuminadas */}
       <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
       
-      {/* FLECHAS DE NAVEGACIÓN (Ocultas en celular para usar deslizamiento nativo, visibles en PC al hover) */}
-      <button 
-        onClick={() => scrollManual('izquierda')}
-        className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 text-black rounded-full shadow-md items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:scale-105 hover:bg-black hover:text-white"
-        aria-label="Anterior"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-      </button>
-
-      <button 
-        onClick={() => scrollManual('derecha')}
-        className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 text-black rounded-full shadow-md items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:scale-105 hover:bg-black hover:text-white"
-        aria-label="Siguiente"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-      </button>
-
-      {/* PISTA DEL CARRUSEL */}
+      {/* PISTA DEL CARRUSEL (Intocable gracias a overflow-hidden y touch-none) */}
       <div 
         ref={scrollRef}
-        className="flex w-full overflow-x-auto gap-6 md:gap-12 px-8 md:px-16 hide-scroll select-none"
-        style={{ scrollBehavior: 'auto', WebkitOverflowScrolling: 'touch' }} 
+        className="flex w-full overflow-hidden gap-6 md:gap-12 px-8 md:px-16 select-none touch-none pointer-events-auto"
       >
         {items.map((p, i) => (
           <Link 
@@ -107,7 +64,7 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
           >
             <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-3 p-3 md:p-4 border border-gray-100 group-hover:border-black group-hover:shadow-md transition-all duration-300">
               <div className="relative w-full h-full pointer-events-none">
-                {/* MAGIA APLICADA AQUÍ: mix-blend-multiply borra el fondo blanco de la imagen */}
+                {/* MAGIA: mix-blend-multiply borra el fondo blanco de la imagen */}
                 <Image src={p.imagen_url} alt={p.nombre} fill sizes="150px" className="object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" unoptimized draggable="false" />
               </div>
             </div>
@@ -196,7 +153,7 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
       </div>
       
       <div className="relative h-48 md:h-64 w-full bg-[#F8F9FA] rounded-[1.25rem] mb-5 overflow-hidden flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-500">
-        {/* MAGIA APLICADA AQUÍ: mix-blend-multiply borra el fondo blanco de las tarjetas de productos */}
+        {/* MAGIA APLICADA AQUÍ: mix-blend-multiply borra el fondo blanco de las tarjetas */}
         <Image 
           src={producto.imagen_url} 
           alt={producto.nombre} 
@@ -231,16 +188,18 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
 }
 
 export default function Home() {
-  
   const [productosRecientes, setProductosRecientes] = useState<any[]>([])
   const [productosTendencia, setProductosTendencia] = useState<any[]>([])
   const [itemsMarquee, setItemsMarquee] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchData() {
+      // LA DIETA DE DATOS: Protege la base de datos pidiendo solo lo esencial para las tarjetas
+      const camposBase = 'id, nombre, marca, precio, tamano, etiquetas, imagen_url, stock';
+
       const [recData, tendData, catData] = await Promise.all([
-        supabase.from('productos').select('*').order('created_at', { ascending: false }).limit(8),
-        supabase.from('productos').select('*').order('precio', { ascending: false }).limit(8),
+        supabase.from('productos').select(camposBase).order('created_at', { ascending: false }).limit(8),
+        supabase.from('productos').select(camposBase).order('precio', { ascending: false }).limit(8),
         supabase.from('productos').select('id, nombre, marca, imagen_url').limit(15)
       ]);
 
@@ -295,7 +254,7 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL GIRATORIO HÍBRIDO */}
+      {/* CARRUSEL GIRATORIO "VITRINA PREMIUM" */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100 relative">
           <div className="text-center mb-6 px-4">
@@ -336,7 +295,7 @@ export default function Home() {
           </div>
           <div className="w-full md:w-1/2 bg-white h-[350px] md:h-auto relative flex items-center justify-center p-8 transition-colors duration-500">
             <div className="absolute w-64 h-64 bg-gray-50 rounded-full scale-150 md:scale-110 group-hover:scale-125 transition-transform duration-1000 ease-out"></div>
-            {/* MAGIA APLICADA AQUÍ: mix-blend-multiply para el frasco gigante del Modo Bestia */}
+            {/* MAGIA: mix-blend-multiply para el frasco gigante del Modo Bestia */}
             {productosRecientes[0] && <Image src={productosRecientes[0].imagen_url} alt="Promo" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain mix-blend-multiply filter drop-shadow-2xl scale-110 md:scale-[1.15] animate-float p-12 z-10" unoptimized />}
           </div>
         </div>
