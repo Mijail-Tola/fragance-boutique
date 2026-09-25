@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
-// 🚀 COMPONENTE MÁGICO PERFECCIONADO: Ruleta libre sin bloqueos
+// 🚀 COMPONENTE MÁGICO: Motor de alta precisión para Celulares y PC
 const CarruselInfinito = ({ items }: { items: any[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -20,29 +20,32 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
     let startX: number;
     let scrollLeft: number;
     let draggedDistance = 0; 
-
-    // Velocidad constante del carrusel
+    
+    // ACUMULADOR MATEMÁTICO: Evita que el celular redondee a cero y se congele
+    let exactScroll = slider.scrollLeft; 
     const scrollSpeed = 0.8; 
 
     const play = () => {
-      // Si nadie lo está tocando, que gire solo
+      // Si nadie lo está tocando, gira automáticamente
       if (!isInteracting && !isDragging) {
-        slider.scrollLeft += scrollSpeed;
-      }
-
-      // LA MAGIA DEL BUCLE INFINITO INVISIBLE
-      // Como tenemos 4 copias exactas, cuando llegamos a la mitad, retrocedemos silenciosamente 1 cuarto.
-      // Así nunca se acaba ni para adelante ni para atrás.
-      if (slider.scrollWidth > 0) {
-        const cuartoDePista = slider.scrollWidth / 4;
+        exactScroll += scrollSpeed; // Sumamos con decimales
         
-        if (slider.scrollLeft >= cuartoDePista * 2) {
-          slider.scrollLeft -= cuartoDePista;
-        } else if (slider.scrollLeft <= 0) {
-          slider.scrollLeft += cuartoDePista;
+        if (slider.scrollWidth > 0) {
+          const cuartoDePista = slider.scrollWidth / 4;
+          if (exactScroll >= cuartoDePista * 2) {
+            exactScroll -= cuartoDePista;
+          } else if (exactScroll <= 0) {
+            exactScroll += cuartoDePista;
+          }
         }
+        
+        // Le pasamos el número exacto al navegador
+        slider.scrollLeft = exactScroll; 
+      } else {
+        // Si el usuario lo está moviendo con el dedo/ratón, sincronizamos el acumulador
+        exactScroll = slider.scrollLeft;
       }
-
+      
       animationId = requestAnimationFrame(play);
     };
 
@@ -50,7 +53,7 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
 
     // CONTROL TÁCTIL (Celulares)
     const handleTouchStart = () => { isInteracting = true; };
-    const handleTouchEnd = () => { isInteracting = false; };
+    const handleTouchEndOrCancel = () => { isInteracting = false; };
     
     // CONTROL DE RATÓN (PC)
     const handleMouseDown = (e: MouseEvent) => {
@@ -73,11 +76,10 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
       e.preventDefault(); 
       const x = e.pageX - slider.offsetLeft;
       draggedDistance = Math.abs(x - startX);
-      const walk = (x - startX) * 1.8; // Sensibilidad del arrastre manual
+      const walk = (x - startX) * 1.8; 
       slider.scrollLeft = scrollLeft - walk;
     };
 
-    // Evitar que abra el producto si solo estábamos arrastrando
     const handleClick = (e: MouseEvent) => {
       if (draggedDistance > 5) {
         e.preventDefault();
@@ -87,7 +89,8 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
 
     // Asignación de eventos
     slider.addEventListener('touchstart', handleTouchStart, { passive: true });
-    slider.addEventListener('touchend', handleTouchEnd);
+    slider.addEventListener('touchend', handleTouchEndOrCancel);
+    slider.addEventListener('touchcancel', handleTouchEndOrCancel); // Vital para celulares (cuando deslizas hacia abajo)
     
     slider.addEventListener('mousedown', handleMouseDown);
     slider.addEventListener('mouseleave', handleMouseUpOrLeave);
@@ -99,7 +102,8 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
       cancelAnimationFrame(animationId);
       if (slider) {
         slider.removeEventListener('touchstart', handleTouchStart);
-        slider.removeEventListener('touchend', handleTouchEnd);
+        slider.removeEventListener('touchend', handleTouchEndOrCancel);
+        slider.removeEventListener('touchcancel', handleTouchEndOrCancel);
         slider.removeEventListener('mousedown', handleMouseDown);
         slider.removeEventListener('mouseleave', handleMouseUpOrLeave);
         slider.removeEventListener('mouseup', handleMouseUpOrLeave);
@@ -111,11 +115,9 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
 
   return (
     <div className="relative flex w-full overflow-hidden">
-      {/* Sombras difuminadas en los bordes para que los perfumes "aparezcan" mágicamente */}
       <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
       
-      {/* QUITAMOS LAS CLASES SNAP PARA LIBERAR EL MOVIMIENTO */}
       <div 
         ref={scrollRef}
         className="flex w-full overflow-x-auto gap-6 md:gap-12 px-4 hide-scroll cursor-grab"
@@ -141,7 +143,7 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
   )
 }
 
-// TARJETA DE PRODUCTO IPHONE STYLE (CON LÓGICA DE DESCUENTOS Y TOPS)
+// TARJETA DE PRODUCTO IPHONE STYLE
 const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
   const sinStockGeneral = Number(producto.stock) <= 0;
   
@@ -268,7 +270,6 @@ export default function Home() {
       if (recData.data) setProductosRecientes(recData.data);
       if (tendData.data) setProductosTendencia(tendData.data);
       if (catData.data) {
-        // Cuadruplicamos la data para que el loop matemático tenga pista para resetearse
         setItemsMarquee([...catData.data, ...catData.data, ...catData.data, ...catData.data]);
       }
     }
@@ -278,7 +279,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#FDFDFD] font-sans text-gray-900 overflow-x-hidden">
       
-      {/* CSS DE ANIMACIONES PREMIUM INCORPORADO */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes float {
           0%, 100% { transform: translateY(0); }
@@ -318,7 +318,7 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL GIRATORIO E INTERACTIVO (Ruleta Libre para PC y Celular) */}
+      {/* CARRUSEL GIRATORIO E INTERACTIVO */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100">
           <div className="text-center mb-6 px-4">
