@@ -106,18 +106,19 @@ const ProductoCard = ({ producto }: { producto: any }) => {
       </div>
       
       <div className="relative h-48 md:h-64 w-full bg-[#F8F9FA] rounded-[1.25rem] mb-4 overflow-hidden flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-500 pointer-events-none">
+        {/* mix-blend-multiply aplicado a la imagen principal */}
         <Image 
           src={imagenPrincipal} 
           alt={producto.nombre} 
           fill sizes="(max-width: 768px) 50vw, 25vw" unoptimized
-          className={`object-contain transition-all duration-700 ease-out p-4 md:p-6 ${mostrarAgotadoEnPortada ? 'opacity-40' : tieneHover ? 'group-hover:opacity-0' : 'group-hover:scale-110 group-hover:rotate-1'}`} 
+          className={`object-contain mix-blend-multiply transition-all duration-700 ease-out p-4 md:p-6 ${mostrarAgotadoEnPortada ? 'opacity-40' : tieneHover ? 'group-hover:opacity-0' : 'group-hover:scale-110 group-hover:rotate-1'}`} 
         />
         {tieneHover && (
           <Image 
             src={imagenSecundaria} 
             alt={`${producto.nombre} alternativa`} 
             fill sizes="(max-width: 768px) 50vw, 25vw" unoptimized
-            className="object-contain absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out p-4 md:p-6" 
+            className="object-contain mix-blend-multiply absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out p-4 md:p-6" 
           />
         )}
         {mostrarAgotadoEnPortada && (
@@ -177,7 +178,10 @@ export default function CatalogoPage() {
 
   useEffect(() => {
     async function fetchProductos() {
-      const { data, error } = await supabase.from('productos').select('*').order('created_at', { ascending: false })
+      // LA DIETA DE DATOS: Pidiendo solo lo esencial para el catálogo
+      const camposBase = 'id, nombre, marca, precio, tamano, etiquetas, imagen_url, galeria, stock';
+      
+      const { data, error } = await supabase.from('productos').select(camposBase).order('created_at', { ascending: false })
       if (error) console.error('Error:', error)
       if (data) setProductos(data)
     }

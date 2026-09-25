@@ -8,10 +8,15 @@ import Navbar from '@/components/Navbar'
 import Image from 'next/image'
 
 export default function CarritoPage() {
-  // LÓGICA INTACTA
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   
-  const total = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0)
+  // SEGURIDAD: Sanitizamos los precios y cantidades directamente en el cálculo 
+  // para evitar manipulaciones en el LocalStorage del navegador
+  const total = items.reduce((sum, item) => {
+    const precioLimpio = Math.max(0, Number(item.precio) || 0);
+    const cantidadLimpia = Math.max(1, Number(item.cantidad) || 1);
+    return sum + (precioLimpio * cantidadLimpia);
+  }, 0);
   
   const [cliente, setCliente] = useState({
     nombre: '', telefono: '', ciudad: 'Cochabamba', direccion: '', notas: ''
@@ -23,18 +28,21 @@ export default function CarritoPage() {
 
   const procesarPedido = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return // Prevención de doble clic
     setLoading(true)
 
-    const pedidoId = crypto.randomUUID()
+    // Generador de código único con fallback de seguridad
+    const pedidoId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).substring(2, 15);
     const codigoGenerado = 'FB-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 
+    // 1. Guardar la orden maestra (Cabecera)
     const { error: errorPedido } = await supabase
       .from('pedidos')
       .insert([{
         id: pedidoId,
         codigo_orden: codigoGenerado,
-        cliente_nombre: cliente.nombre,
-        cliente_telefono: cliente.telefono,
+        cliente_nombre: cliente.nombre.trim(),
+        cliente_telefono: cliente.telefono.trim(),
         ciudad: cliente.ciudad,
         direccion: 'Por coordinar por WhatsApp', 
         metodo_envio: 'Delivery local',
@@ -43,16 +51,17 @@ export default function CarritoPage() {
       }])
 
     if (errorPedido) {
-      alert("Hubo un error al procesar tu pedido. Intenta nuevamente.")
+      alert("Hubo un error al procesar tu pedido. Intenta nuevamente o verifica tu conexión.")
       setLoading(false)
       return
     }
 
+    // 2. Guardar los items del pedido (Sanitizados)
     const itemsParaGuardar = items.map(item => ({
       pedido_id: pedidoId,
       producto_id: item.producto_id, 
-      cantidad: item.cantidad,
-      precio_unitario: item.precio,
+      cantidad: Math.max(1, Number(item.cantidad)), // Evitamos cantidades negativas falsas
+      precio_unitario: Math.max(0, Number(item.precio)), // Evitamos precios negativos falsos
     }))
 
     await supabase.from('pedido_items').insert(itemsParaGuardar)
@@ -72,8 +81,10 @@ export default function CarritoPage() {
     mensaje += `--------------------------------------\n`
     items.forEach(item => {
       const tamanoTxt = item.tamano ? ` [${item.tamano}]` : '';
-      mensaje += `- ${item.cantidad}x ${item.nombre}${tamanoTxt} (Bs. ${item.precio})\n`
-      mensaje += `   _Subtotal: Bs. ${item.precio * item.cantidad}_\n`
+      const precioLimpio = Math.max(0, Number(item.precio));
+      const subtotalLimpio = precioLimpio * item.cantidad;
+      mensaje += `- ${item.cantidad}x ${item.nombre}${tamanoTxt} (Bs. ${precioLimpio})\n`
+      mensaje += `   _Subtotal: Bs. ${subtotalLimpio}_\n`
     })
     mensaje += `--------------------------------------\n`
     mensaje += `*TOTAL A PAGAR: Bs. ${total}*\n\n`
@@ -91,7 +102,7 @@ export default function CarritoPage() {
 
     const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`
     window.open(url, '_blank')
-    clearCart()
+    clearCart() // Limpiamos el carrito al enviar el mensaje
   }
 
   // VISTA: CARRITO VACÍO (DISEÑO PREMIUM)
@@ -144,51 +155,55 @@ export default function CarritoPage() {
             )}
 
             <div className="flex flex-col gap-4">
-              {items.map((item) => (
-                <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-4 items-center bg-white p-4 md:p-5 rounded-3xl border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] group hover:shadow-[0_10px_30px_rgb(0,0,0,0.06)] transition-all">
-                  
-                  {/* Foto y Título */}
-                  <div className="md:col-span-6 flex items-center gap-4">
-                    {!mostrarQR && (
-                      <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors p-2 shrink-0">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
-                    )}
-                    <div className="w-20 h-20 bg-[#F8F9FA] rounded-2xl relative shrink-0 p-2 border border-gray-50 overflow-hidden">
-                      <Image src={item.imagen_url || '/placeholder.png'} alt={item.nombre} fill className="object-contain" unoptimized />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{item.nombre}</h4>
-                      {item.tamano && <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider mt-1.5 bg-gray-50 border border-gray-100 px-2 py-1 rounded-full inline-block">{item.tamano}</p>}
-                    </div>
-                  </div>
-                  
-                  {/* Precio (Oculto en móvil) */}
-                  <div className="hidden md:block md:col-span-2 text-center text-gray-500 font-bold text-sm">
-                    {item.precio} Bs.
-                  </div>
-                  
-                  {/* Selector de Cantidad */}
-                  <div className="md:col-span-2 flex justify-between md:justify-center items-center mt-2 md:mt-0">
-                    <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad:</span>
-                    {!mostrarQR ? (
-                      <div className="flex items-center bg-gray-50 border border-gray-200 rounded-full h-10 px-1 shadow-inner">
-                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.cantidad - 1))} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black hover:bg-white rounded-full transition-colors text-lg font-light shadow-sm">-</button>
-                        <span className="w-8 text-center font-bold text-sm text-gray-900">{item.cantidad}</span>
-                        <button onClick={() => updateQuantity(item.id, item.cantidad + 1)} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black hover:bg-white rounded-full transition-colors text-lg font-light shadow-sm">+</button>
+              {items.map((item) => {
+                const precio = Math.max(0, Number(item.precio));
+                return (
+                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-4 items-center bg-white p-4 md:p-5 rounded-3xl border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] group hover:shadow-[0_10px_30px_rgb(0,0,0,0.06)] transition-all">
+                    
+                    {/* Foto y Título */}
+                    <div className="md:col-span-6 flex items-center gap-4">
+                      {!mostrarQR && (
+                        <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors p-2 shrink-0" aria-label="Eliminar producto">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      )}
+                      <div className="w-20 h-20 bg-[#F8F9FA] rounded-2xl relative shrink-0 p-2 border border-gray-50 overflow-hidden">
+                        {/* MAGIA APLICADA: mix-blend-multiply borra los fondos blancos de los perfumes del carrito */}
+                        <Image src={item.imagen_url || '/placeholder.png'} alt={item.nombre} fill className="object-contain mix-blend-multiply" unoptimized />
                       </div>
-                    ) : (
-                      <span className="font-black text-gray-900 px-4 py-1.5 bg-gray-50 rounded-full border border-gray-100">{item.cantidad} und.</span>
-                    )}
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2">{item.nombre}</h4>
+                        {item.tamano && <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider mt-1.5 bg-gray-50 border border-gray-100 px-2 py-1 rounded-full inline-block">{item.tamano}</p>}
+                      </div>
+                    </div>
+                    
+                    {/* Precio */}
+                    <div className="hidden md:block md:col-span-2 text-center text-gray-500 font-bold text-sm">
+                      {precio} Bs.
+                    </div>
+                    
+                    {/* Selector de Cantidad */}
+                    <div className="md:col-span-2 flex justify-between md:justify-center items-center mt-2 md:mt-0">
+                      <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad:</span>
+                      {!mostrarQR ? (
+                        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-full h-10 px-1 shadow-inner">
+                          <button onClick={() => updateQuantity(item.id, Math.max(1, item.cantidad - 1))} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black hover:bg-white rounded-full transition-colors text-lg font-light shadow-sm">-</button>
+                          <span className="w-8 text-center font-bold text-sm text-gray-900">{item.cantidad}</span>
+                          <button onClick={() => updateQuantity(item.id, item.cantidad + 1)} className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black hover:bg-white rounded-full transition-colors text-lg font-light shadow-sm">+</button>
+                        </div>
+                      ) : (
+                        <span className="font-black text-gray-900 px-4 py-1.5 bg-gray-50 rounded-full border border-gray-100">{item.cantidad} und.</span>
+                      )}
+                    </div>
+                    
+                    {/* Subtotal */}
+                    <div className="md:col-span-2 flex justify-between md:justify-end items-center mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-0 border-gray-50">
+                      <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal:</span>
+                      <span className="font-black text-gray-900 text-base">{precio * item.cantidad} Bs.</span>
+                    </div>
                   </div>
-                  
-                  {/* Subtotal */}
-                  <div className="md:col-span-2 flex justify-between md:justify-end items-center mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-0 border-gray-50">
-                    <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal:</span>
-                    <span className="font-black text-gray-900 text-base">{item.precio * item.cantidad} Bs.</span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             {!mostrarQR && (
@@ -201,7 +216,7 @@ export default function CarritoPage() {
             )}
           </section>
 
-          {/* COLUMNA DERECHA: RESUMEN Y FORMULARIO / QR (Estilo Tarjeta Flotante) */}
+          {/* COLUMNA DERECHA: RESUMEN Y FORMULARIO / QR */}
           <section className="lg:col-span-5">
             <div className="bg-[#F8F9FA] p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-[0_15px_40px_rgb(0,0,0,0.04)] lg:sticky lg:top-28">
               
@@ -279,8 +294,8 @@ export default function CarritoPage() {
                   </p>
                   
                   <div className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-sm mb-8 relative">
-                    {/* Borde dashed decorativo interno */}
                     <div className="absolute inset-4 border-2 border-dashed border-gray-100 rounded-[1.5rem] pointer-events-none"></div>
+                    {/* Aquí debes reemplazar la URL de la imagen por tu propio QR real */}
                     <img 
                       src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" 
                       alt="QR de Pago Fragance Boutique" 
