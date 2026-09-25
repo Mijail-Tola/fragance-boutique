@@ -6,109 +6,143 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
-// 🚀 COMPONENTE MÁGICO: Motor de alta precisión para Celulares y PC
+// 🚀 COMPONENTE MÁGICO PERFECCIONADO: GPU Accelerated + Drag Ultra Fluido
 const CarruselInfinito = ({ items }: { items: any[] }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const slider = scrollRef.current;
-    if (!slider) return;
+    const track = trackRef.current;
+    if (!track) return;
 
     let animationId: number;
     let isInteracting = false;
     let isDragging = false;
-    let startX: number;
-    let scrollLeft: number;
-    let draggedDistance = 0; 
-    
-    // ACUMULADOR MATEMÁTICO: Evita que el celular redondee a cero y se congele
-    let exactScroll = slider.scrollLeft; 
-    const scrollSpeed = 0.8; 
+    let startX = 0;
+    let lastX = 0;
+    let offset = 0;
+    let draggedDistance = 0;
+
+    const speed = 0.8; // Velocidad suave
+    let totalWidth = 0;
+
+    const updateWidth = () => {
+      // Tomamos la mitad exacta del ancho, ya que el array está cuadruplicado
+      totalWidth = track.scrollWidth / 2;
+    };
+
+    // Le damos un respiro al DOM para que las imágenes se pinten antes de medir
+    setTimeout(updateWidth, 200);
 
     const play = () => {
-      // Si nadie lo está tocando, gira automáticamente
-      if (!isInteracting && !isDragging) {
-        exactScroll += scrollSpeed; // Sumamos con decimales
+      if (!isInteracting && !isDragging && totalWidth > 0) {
+        offset += speed;
         
-        if (slider.scrollWidth > 0) {
-          const cuartoDePista = slider.scrollWidth / 4;
-          if (exactScroll >= cuartoDePista * 2) {
-            exactScroll -= cuartoDePista;
-          } else if (exactScroll <= 0) {
-            exactScroll += cuartoDePista;
-          }
+        // Loop infinito matemático invisible
+        if (offset >= totalWidth) {
+          offset -= totalWidth;
+        } else if (offset <= 0) {
+          offset += totalWidth;
         }
         
-        // Le pasamos el número exacto al navegador
-        slider.scrollLeft = exactScroll; 
-      } else {
-        // Si el usuario lo está moviendo con el dedo/ratón, sincronizamos el acumulador
-        exactScroll = slider.scrollLeft;
+        // Magia GPU: translate3d hace que sea suave como la mantequilla
+        track.style.transform = `translate3d(-${offset}px, 0, 0)`;
       }
-      
       animationId = requestAnimationFrame(play);
     };
 
     animationId = requestAnimationFrame(play);
 
-    // CONTROL TÁCTIL (Celulares)
-    const handleTouchStart = () => { isInteracting = true; };
-    const handleTouchEndOrCancel = () => { isInteracting = false; };
-    
-    // CONTROL DE RATÓN (PC)
+    // --- EVENTOS TÁCTILES (CELULAR) ---
+    const handleTouchStart = (e: TouchEvent) => {
+      isInteracting = true;
+      isDragging = true;
+      draggedDistance = 0;
+      lastX = e.touches[0].clientX;
+      startX = lastX;
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging || totalWidth === 0) return;
+      const currentX = e.touches[0].clientX;
+      const delta = lastX - currentX;
+      draggedDistance += Math.abs(delta);
+      offset += delta;
+      lastX = currentX;
+
+      if (offset >= totalWidth) offset -= totalWidth;
+      else if (offset <= 0) offset += totalWidth;
+
+      track.style.transform = `translate3d(-${offset}px, 0, 0)`;
+    };
+    const handleTouchEnd = () => {
+      isInteracting = false;
+      isDragging = false;
+    };
+
+    // --- EVENTOS DE RATÓN (PC) ---
     const handleMouseDown = (e: MouseEvent) => {
       isInteracting = true;
       isDragging = true;
       draggedDistance = 0;
-      startX = e.pageX - slider.offsetLeft;
-      scrollLeft = slider.scrollLeft;
-      slider.style.cursor = 'grabbing';
+      lastX = e.clientX;
+      startX = lastX;
+      track.style.cursor = 'grabbing';
     };
-    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || totalWidth === 0) return;
+      e.preventDefault();
+      const currentX = e.clientX;
+      const delta = lastX - currentX;
+      draggedDistance += Math.abs(delta);
+      offset += delta;
+      lastX = currentX;
+
+      if (offset >= totalWidth) offset -= totalWidth;
+      else if (offset <= 0) offset += totalWidth;
+
+      track.style.transform = `translate3d(-${offset}px, 0, 0)`;
+    };
     const handleMouseUpOrLeave = () => {
       isInteracting = false;
       isDragging = false;
-      slider.style.cursor = 'grab';
-    };
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-      e.preventDefault(); 
-      const x = e.pageX - slider.offsetLeft;
-      draggedDistance = Math.abs(x - startX);
-      const walk = (x - startX) * 1.8; 
-      slider.scrollLeft = scrollLeft - walk;
+      track.style.cursor = 'grab';
     };
 
-    const handleClick = (e: MouseEvent) => {
+    // Si arrastramos mucho, evitamos que al soltar se abra un producto
+    const handleClick = (e: MouseEvent | TouchEvent) => {
       if (draggedDistance > 5) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
 
-    // Asignación de eventos
-    slider.addEventListener('touchstart', handleTouchStart, { passive: true });
-    slider.addEventListener('touchend', handleTouchEndOrCancel);
-    slider.addEventListener('touchcancel', handleTouchEndOrCancel); // Vital para celulares (cuando deslizas hacia abajo)
+    // Listeners
+    track.addEventListener('touchstart', handleTouchStart, { passive: true });
+    track.addEventListener('touchmove', handleTouchMove, { passive: true });
+    track.addEventListener('touchend', handleTouchEnd);
+    track.addEventListener('touchcancel', handleTouchEnd);
+
+    track.addEventListener('mousedown', handleMouseDown);
+    track.addEventListener('mousemove', handleMouseMove);
+    track.addEventListener('mouseleave', handleMouseUpOrLeave);
+    track.addEventListener('mouseup', handleMouseUpOrLeave);
     
-    slider.addEventListener('mousedown', handleMouseDown);
-    slider.addEventListener('mouseleave', handleMouseUpOrLeave);
-    slider.addEventListener('mouseup', handleMouseUpOrLeave);
-    slider.addEventListener('mousemove', handleMouseMove);
-    slider.addEventListener('click', handleClick, { capture: true });
+    track.addEventListener('click', handleClick, { capture: true });
+
+    window.addEventListener('resize', updateWidth);
 
     return () => {
       cancelAnimationFrame(animationId);
-      if (slider) {
-        slider.removeEventListener('touchstart', handleTouchStart);
-        slider.removeEventListener('touchend', handleTouchEndOrCancel);
-        slider.removeEventListener('touchcancel', handleTouchEndOrCancel);
-        slider.removeEventListener('mousedown', handleMouseDown);
-        slider.removeEventListener('mouseleave', handleMouseUpOrLeave);
-        slider.removeEventListener('mouseup', handleMouseUpOrLeave);
-        slider.removeEventListener('mousemove', handleMouseMove);
-        slider.removeEventListener('click', handleClick, { capture: true });
+      window.removeEventListener('resize', updateWidth);
+      if (track) {
+        track.removeEventListener('touchstart', handleTouchStart);
+        track.removeEventListener('touchmove', handleTouchMove);
+        track.removeEventListener('touchend', handleTouchEnd);
+        track.removeEventListener('touchcancel', handleTouchEnd);
+        track.removeEventListener('mousedown', handleMouseDown);
+        track.removeEventListener('mousemove', handleMouseMove);
+        track.removeEventListener('mouseleave', handleMouseUpOrLeave);
+        track.removeEventListener('mouseup', handleMouseUpOrLeave);
+        track.removeEventListener('click', handleClick, { capture: true });
       }
     };
   }, []);
@@ -119,9 +153,9 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
       <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
       
       <div 
-        ref={scrollRef}
-        className="flex w-full overflow-x-auto gap-6 md:gap-12 px-4 hide-scroll cursor-grab"
-        style={{ scrollBehavior: 'auto' }}
+        ref={trackRef}
+        className="flex w-max gap-6 md:gap-12 px-4 cursor-grab"
+        style={{ touchAction: 'pan-y' }} // Permite hacer scroll vertical en celular al tocar el carrusel
       >
         {items.map((p, i) => (
           <Link 
@@ -270,6 +304,7 @@ export default function Home() {
       if (recData.data) setProductosRecientes(recData.data);
       if (tendData.data) setProductosTendencia(tendData.data);
       if (catData.data) {
+        // Cuadruplicamos el array para asegurar pista suficiente
         setItemsMarquee([...catData.data, ...catData.data, ...catData.data, ...catData.data]);
       }
     }
@@ -300,7 +335,6 @@ export default function Home() {
 
       <Navbar />
 
-      {/* HERO BANNER ANIMADO */}
       <section className="relative w-full bg-gradient-to-br from-[#D30F30] via-[#b80c29] to-[#80071b] py-20 md:py-36 flex items-center justify-center text-center px-4 overflow-hidden rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-xl">
         <div className="max-w-4xl mx-auto z-10 relative">
           <p className="animate-fade-up text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-4 text-white/90 drop-shadow-sm">
@@ -318,7 +352,7 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL GIRATORIO E INTERACTIVO */}
+      {/* CARRUSEL GIRATORIO E INTERACTIVO PREMIUM */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100">
           <div className="text-center mb-6 px-4">
@@ -328,7 +362,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* SECCIÓN 1: RECIÉN LLEGADOS */}
       <section className="max-w-7xl mx-auto py-16 md:py-24 overflow-hidden">
         <div className="text-center mb-10 px-4">
           <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-gray-900 mb-3">Recién Llegados</h2>
@@ -350,7 +383,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SECCIÓN "ISLA" MODO BESTIA! */}
       <section className="w-full px-4 py-8 md:py-16">
         <div className="max-w-6xl mx-auto rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row group transition-transform duration-500 hover:shadow-3xl">
           <div className="w-full md:w-1/2 bg-gradient-to-br from-[#0f0205] to-[#3a0b16] p-10 md:p-16 lg:p-20 text-center md:text-left flex flex-col justify-center relative overflow-hidden">
@@ -366,7 +398,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SECCIÓN 2: TENDENCIAS HOY */}
       <section className="max-w-7xl mx-auto py-16 md:py-24 overflow-hidden">
         <div className="text-center mb-10 px-4">
           <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-gray-900 mb-3">En Tendencia Hoy</h2>
@@ -377,7 +408,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SECCIÓN 3: BLOQUES POR GÉNERO */}
       <section className="max-w-7xl mx-auto px-4 pb-24">
         <div className="text-center mb-10"><h2 className="text-xl md:text-3xl font-black uppercase tracking-tight text-gray-900">Encuentra tu esencia</h2></div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 h-[600px] md:h-[400px]">
