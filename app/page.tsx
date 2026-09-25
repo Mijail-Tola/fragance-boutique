@@ -6,143 +6,95 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
-// 🚀 COMPONENTE MÁGICO PERFECCIONADO: GPU Accelerated + Drag Ultra Fluido
+// 🚀 COMPONENTE MÁGICO PERFECCIONADO: Giro Suave + Scroll Nativo Perfecto
 const CarruselInfinito = ({ items }: { items: any[] }) => {
-  const trackRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
+    const slider = scrollRef.current;
+    if (!slider) return;
 
     let animationId: number;
     let isInteracting = false;
-    let isDragging = false;
-    let startX = 0;
-    let lastX = 0;
-    let offset = 0;
-    let draggedDistance = 0;
+    let isMouseDown = false;
+    let startX: number;
+    let scrollLeft: number;
 
-    const speed = 0.8; // Velocidad suave
-    let totalWidth = 0;
-
-    const updateWidth = () => {
-      // Tomamos la mitad exacta del ancho, ya que el array está cuadruplicado
-      totalWidth = track.scrollWidth / 2;
-    };
-
-    // Le damos un respiro al DOM para que las imágenes se pinten antes de medir
-    setTimeout(updateWidth, 200);
+    const scrollSpeed = 0.5; // Velocidad suave
 
     const play = () => {
-      if (!isInteracting && !isDragging && totalWidth > 0) {
-        offset += speed;
-        
-        // Loop infinito matemático invisible
-        if (offset >= totalWidth) {
-          offset -= totalWidth;
-        } else if (offset <= 0) {
-          offset += totalWidth;
+      if (!isInteracting && !isMouseDown) {
+        // Avance automático
+        slider.scrollLeft += scrollSpeed;
+
+        // Loop infinito: si pasamos la mitad, saltamos atrás silenciosamente
+        if (slider.scrollWidth > 0 && slider.scrollLeft >= slider.scrollWidth / 2) {
+          slider.scrollLeft = 0;
         }
-        
-        // Magia GPU: translate3d hace que sea suave como la mantequilla
-        track.style.transform = `translate3d(-${offset}px, 0, 0)`;
       }
       animationId = requestAnimationFrame(play);
     };
 
     animationId = requestAnimationFrame(play);
 
-    // --- EVENTOS TÁCTILES (CELULAR) ---
-    const handleTouchStart = (e: TouchEvent) => {
-      isInteracting = true;
-      isDragging = true;
-      draggedDistance = 0;
-      lastX = e.touches[0].clientX;
-      startX = lastX;
-    };
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging || totalWidth === 0) return;
-      const currentX = e.touches[0].clientX;
-      const delta = lastX - currentX;
-      draggedDistance += Math.abs(delta);
-      offset += delta;
-      lastX = currentX;
-
-      if (offset >= totalWidth) offset -= totalWidth;
-      else if (offset <= 0) offset += totalWidth;
-
-      track.style.transform = `translate3d(-${offset}px, 0, 0)`;
-    };
-    const handleTouchEnd = () => {
-      isInteracting = false;
-      isDragging = false;
-    };
+    // --- EVENTOS TÁCTILES (Móvil) ---
+    // En celular, dejamos que el scroll nativo haga el trabajo para que tenga inercia
+    const handleTouchStart = () => { isInteracting = true; };
+    const handleTouchEnd = () => { isInteracting = false; };
 
     // --- EVENTOS DE RATÓN (PC) ---
-    const handleMouseDown = (e: MouseEvent) => {
+    const handleMouseEnter = () => { isInteracting = true; };
+    const handleMouseLeave = () => { 
+      isInteracting = false; 
+      isMouseDown = false; 
+      slider.style.cursor = 'grab';
+    };
+
+    // Implementamos arrastre manual para PC (porque el mouse no hace scroll nativo como el dedo)
+    const handleMouseDownEvent = (e: MouseEvent) => {
       isInteracting = true;
-      isDragging = true;
-      draggedDistance = 0;
-      lastX = e.clientX;
-      startX = lastX;
-      track.style.cursor = 'grabbing';
+      isMouseDown = true;
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+      slider.style.cursor = 'grabbing';
     };
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || totalWidth === 0) return;
-      e.preventDefault();
-      const currentX = e.clientX;
-      const delta = lastX - currentX;
-      draggedDistance += Math.abs(delta);
-      offset += delta;
-      lastX = currentX;
 
-      if (offset >= totalWidth) offset -= totalWidth;
-      else if (offset <= 0) offset += totalWidth;
-
-      track.style.transform = `translate3d(-${offset}px, 0, 0)`;
-    };
-    const handleMouseUpOrLeave = () => {
+    const handleMouseUpEvent = () => {
       isInteracting = false;
-      isDragging = false;
-      track.style.cursor = 'grab';
+      isMouseDown = false;
+      slider.style.cursor = 'grab';
     };
 
-    // Si arrastramos mucho, evitamos que al soltar se abra un producto
-    const handleClick = (e: MouseEvent | TouchEvent) => {
-      if (draggedDistance > 5) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+    const handleMouseMoveEvent = (e: MouseEvent) => {
+      if (!isMouseDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 2; // Sensibilidad del ratón
+      slider.scrollLeft = scrollLeft - walk;
     };
 
-    // Listeners
-    track.addEventListener('touchstart', handleTouchStart, { passive: true });
-    track.addEventListener('touchmove', handleTouchMove, { passive: true });
-    track.addEventListener('touchend', handleTouchEnd);
-    track.addEventListener('touchcancel', handleTouchEnd);
+    // Asignar listeners
+    slider.addEventListener('touchstart', handleTouchStart, { passive: true });
+    slider.addEventListener('touchend', handleTouchEnd);
+    slider.addEventListener('touchcancel', handleTouchEnd);
 
-    track.addEventListener('mousedown', handleMouseDown);
-    track.addEventListener('mousemove', handleMouseMove);
-    track.addEventListener('mouseleave', handleMouseUpOrLeave);
-    track.addEventListener('mouseup', handleMouseUpOrLeave);
-    
-    track.addEventListener('click', handleClick, { capture: true });
-
-    window.addEventListener('resize', updateWidth);
+    slider.addEventListener('mouseenter', handleMouseEnter);
+    slider.addEventListener('mouseleave', handleMouseLeave);
+    slider.addEventListener('mousedown', handleMouseDownEvent);
+    slider.addEventListener('mouseup', handleMouseUpEvent);
+    slider.addEventListener('mousemove', handleMouseMoveEvent);
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', updateWidth);
-      if (track) {
-        track.removeEventListener('touchstart', handleTouchStart);
-        track.removeEventListener('touchmove', handleTouchMove);
-        track.removeEventListener('touchend', handleTouchEnd);
-        track.removeEventListener('touchcancel', handleTouchEnd);
-        track.removeEventListener('mousedown', handleMouseDown);
-        track.removeEventListener('mousemove', handleMouseMove);
-        track.removeEventListener('mouseleave', handleMouseUpOrLeave);
-        track.removeEventListener('mouseup', handleMouseUpOrLeave);
-        track.removeEventListener('click', handleClick, { capture: true });
+      if (slider) {
+        slider.removeEventListener('touchstart', handleTouchStart);
+        slider.removeEventListener('touchend', handleTouchEnd);
+        slider.removeEventListener('touchcancel', handleTouchEnd);
+        slider.removeEventListener('mouseenter', handleMouseEnter);
+        slider.removeEventListener('mouseleave', handleMouseLeave);
+        slider.removeEventListener('mousedown', handleMouseDownEvent);
+        slider.removeEventListener('mouseup', handleMouseUpEvent);
+        slider.removeEventListener('mousemove', handleMouseMoveEvent);
       }
     };
   }, []);
@@ -152,17 +104,22 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
       <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
       
+      {/* 
+        Usamos overflow-x-auto nativo. 
+        En móvil esto da inercia natural. 
+        En PC el motor JS maneja el arrastre. 
+      */}
       <div 
-        ref={trackRef}
-        className="flex w-max gap-6 md:gap-12 px-4 cursor-grab"
-        style={{ touchAction: 'pan-y' }} // Permite hacer scroll vertical en celular al tocar el carrusel
+        ref={scrollRef}
+        className="flex w-full overflow-x-auto gap-6 md:gap-12 px-4 hide-scroll cursor-grab select-none"
+        style={{ scrollBehavior: 'auto', WebkitOverflowScrolling: 'touch' }}
       >
         {items.map((p, i) => (
           <Link 
             href={`/producto/${p.id}`} 
             key={`${p.id}-${i}`} 
             draggable={false} 
-            className="flex flex-col items-center group w-24 md:w-32 shrink-0 my-4 select-none"
+            className="flex flex-col items-center group w-24 md:w-32 shrink-0 my-4"
           >
             <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-3 p-3 md:p-4 border border-gray-100 group-hover:border-black group-hover:shadow-md transition-all duration-300 pointer-events-none">
               <div className="relative w-full h-full pointer-events-none">
@@ -352,7 +309,7 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL GIRATORIO E INTERACTIVO PREMIUM */}
+      {/* CARRUSEL GIRATORIO E INTERACTIVO */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100">
           <div className="text-center mb-6 px-4">

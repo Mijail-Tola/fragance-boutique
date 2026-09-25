@@ -11,7 +11,8 @@ const CATEGORIAS_PREDETERMINADAS = [
   "Perfumes de diseñador",
   "Perfumes de Cartera",
   "Cosméticos",
-  "Perfumes Nicho"
+  "Perfumes Nicho",
+  "Desodorantes"
 ]
 
 const COLORES_TAGS = [

@@ -170,10 +170,11 @@ function ProductoDetalle({ id }: { id: string }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
           
-          {/* ZONA IZQUIERDA: GALERÍA DESLIZABLE PREMIUM */}
+          {/* ZONA IZQUIERDA: GALERÍA DESLIZABLE PREMIUM (Bordes restaurados) */}
           <div className="flex flex-col gap-4">
             
-            <div className="relative w-full h-[350px] md:h-[550px] bg-gray-50 rounded-sm overflow-hidden group">
+            {/* AQUÍ RECUPERAMOS EL DISEÑO REDONDEADO: rounded-[2.5rem] md:rounded-[3rem] */}
+            <div className="relative w-full h-[400px] md:h-[550px] bg-[#F8F9FA] rounded-[2.5rem] md:rounded-[3rem] border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] overflow-hidden group">
               
               {/* INSIGNIAS PRINCIPALES */}
               <div className="absolute top-6 left-6 z-10 flex flex-col gap-2">
@@ -181,7 +182,7 @@ function ProductoDetalle({ id }: { id: string }) {
                 {descuentoPorcentaje > 0 && <span className="bg-[#e50000] text-white text-[10px] md:text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">-{descuentoPorcentaje}% OFF</span>}
               </div>
 
-              {/* Contenedor Flex Deslizable (Ocultamos barras de scroll) */}
+              {/* Contenedor Flex Deslizable */}
               <div 
                 ref={sliderRef}
                 onScroll={handleScroll}
@@ -204,51 +205,49 @@ function ProductoDetalle({ id }: { id: string }) {
               
               {sinStockGeneral && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-[2px] pointer-events-none">
-                  <span className="font-bold text-gray-900 tracking-widest text-2xl px-6 py-4 bg-white/90 shadow-sm">
+                  <span className="font-bold text-gray-900 tracking-widest text-2xl px-6 py-4 bg-white/90 shadow-sm rounded-full">
                     AGOTADO
                   </span>
                 </div>
               )}
 
-              {/* FLECHAS PARA ESCRITORIO (Ocultas en celular con hidden md:flex) */}
+              {/* FLECHAS PARA ESCRITORIO */}
               {galeria.length > 1 && (
                 <>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
-                      const newIndex = (indexActivo - 1 + galeria.length) % galeria.length;
-                      scrollToImage(newIndex);
+                      scrollToImage((indexActivo - 1 + galeria.length) % galeria.length);
                     }}
-                    className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white/90 text-black rounded-full shadow-md hover:bg-black hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                    className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center bg-white/90 text-black rounded-full shadow-md hover:bg-black hover:text-white transition-all opacity-0 group-hover:opacity-100 hover:scale-105"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
                   </button>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
-                      const newIndex = (indexActivo + 1) % galeria.length;
-                      scrollToImage(newIndex);
+                      scrollToImage((indexActivo + 1) % galeria.length);
                     }}
-                    className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white/90 text-black rounded-full shadow-md hover:bg-black hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                    className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center bg-white/90 text-black rounded-full shadow-md hover:bg-black hover:text-white transition-all opacity-0 group-hover:opacity-100 hover:scale-105"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
                   </button>
                 </>
               )}
             </div>
             
-            {/* Miniaturas Inferiores Sincronizadas */}
+            {/* Miniaturas Inferiores Sincronizadas (Bordes restaurados rounded-[1.2rem]) */}
             {galeria.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] justify-center mt-2">
                 {galeria.map((img: string, idx: number) => {
                   const isActive = indexActivo === idx;
                   return (
                     <button 
                       key={`miniatura-${idx}`} 
                       onClick={() => scrollToImage(idx)}
-                      className={`relative h-20 w-20 md:h-24 md:w-24 shrink-0 rounded-sm overflow-hidden snap-center transition-all duration-200 border-2 ${isActive ? 'border-black opacity-100' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                      className={`relative h-20 w-20 md:h-24 md:w-24 shrink-0 rounded-[1.2rem] overflow-hidden snap-center transition-all duration-300 border-2 ${isActive ? 'border-black opacity-100 scale-105 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
                     >
-                      <Image src={img} alt={`Miniatura ${idx + 1}`} fill sizes="100px" className="object-cover bg-gray-50" unoptimized />
+                      <Image src={img} alt={`Miniatura ${idx + 1}`} fill sizes="100px" className="object-cover bg-[#F8F9FA]" unoptimized />
                     </button>
                   )
                 })}
@@ -284,12 +283,12 @@ function ProductoDetalle({ id }: { id: string }) {
                         key={`${v.nombre}-${index}`} 
                         disabled={v.agotado}
                         onClick={() => setVarianteSeleccionada(v)}
-                        className={`px-6 py-2.5 font-medium text-sm tracking-wide transition-all duration-300 border ${
+                        className={`px-6 py-2.5 font-medium text-sm tracking-wide transition-all duration-300 border rounded-full ${
                           v.agotado 
                             ? 'opacity-30 cursor-not-allowed bg-transparent text-gray-800 border-gray-200 line-through' 
                             : isSelected 
-                              ? 'border-black bg-black text-white shadow-md' 
-                              : 'border-gray-200 text-gray-800 bg-white hover:border-black'
+                              ? 'border-black bg-black text-white shadow-md transform scale-[1.02]' 
+                              : 'border-gray-200 text-gray-800 bg-white hover:border-black hover:text-black'
                         }`}
                       >
                         {v.nombre}
@@ -305,10 +304,10 @@ function ProductoDetalle({ id }: { id: string }) {
 
             {/* SELECTOR DE CANTIDAD Y BOTONES */}
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <div className="flex items-center border border-gray-300 h-14 w-full sm:w-32">
-                <button onClick={() => setCantidad(Math.max(1, cantidad - 1))} className="px-4 text-gray-500 hover:text-black transition text-xl font-light">-</button>
-                <span className="flex-1 text-center font-bold text-gray-900">{cantidad}</span>
-                <button onClick={() => setCantidad(cantidad + 1)} className="px-4 text-gray-500 hover:text-black transition text-xl font-light">+</button>
+              <div className="flex items-center justify-between border border-gray-200 bg-gray-50 rounded-full h-14 w-full sm:w-40 px-2 shadow-inner">
+                <button onClick={() => setCantidad(Math.max(1, cantidad - 1))} className="w-12 h-12 flex items-center justify-center text-gray-500 hover:text-black hover:bg-white rounded-full transition-all text-xl font-light">-</button>
+                <span className="flex-1 text-center font-black text-lg text-gray-900">{cantidad}</span>
+                <button onClick={() => setCantidad(cantidad + 1)} className="w-12 h-12 flex items-center justify-center text-gray-500 hover:text-black hover:bg-white rounded-full transition-all text-xl font-light">+</button>
               </div>
               
               <button 
@@ -325,36 +324,36 @@ function ProductoDetalle({ id }: { id: string }) {
                     imagen_url: galeria[indexActivo] 
                   })
                 }}
-                className={`flex-1 h-14 font-bold uppercase tracking-widest text-sm transition-all shadow-lg active:scale-[0.98] ${
+                className={`flex-1 h-14 rounded-full font-bold uppercase tracking-widest text-xs md:text-sm transition-all duration-300 shadow-lg active:scale-[0.98] ${
                   botonBloqueado 
                     ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed shadow-none' 
-                    : 'bg-black text-white hover:bg-gray-800'
+                    : 'bg-black text-white hover:bg-[#D30F30] hover:shadow-[0_10px_30px_rgba(211,15,48,0.2)]'
                 }`}
               >
                 {sinStockGeneral ? 'Agotado' : (varianteAgotada ? 'Tamaño no disponible' : 'Agregar al Carrito')}
               </button>
             </div>
             
-            {/* DESCRIPCIÓN MINIMALISTA */}
-            <div className="border-t border-gray-200 pt-8 mt-4 space-y-4">
+            {/* DESCRIPCIÓN MINIMALISTA (Bordes recuperados) */}
+            <div className="bg-[#F8F9FA] rounded-[2rem] p-6 md:p-8 mt-4 border border-gray-100">
               {producto.descripcion && producto.descripcion !== '...' && (
                 <div className="mb-6">
-                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-3">Descripción</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{producto.descripcion}</p>
+                  <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Descripción</h3>
+                  <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line font-medium">{producto.descripcion}</p>
                 </div>
               )}
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-200 pt-6 mt-6">
                 <div>
-                  <span className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Categoría</span>
-                  <span className="font-medium text-gray-900">{producto.categoria}</span>
+                  <span className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Categoría</span>
+                  <span className="font-bold text-gray-900">{producto.categoria}</span>
                 </div>
                 <div>
-                  <span className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Estado</span>
+                  <span className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Estado</span>
                   {sinStockGeneral ? (
-                    <span className="text-rose-600 font-bold uppercase tracking-wider">AGOTADO</span>
+                    <span className="text-rose-600 font-black uppercase tracking-wider">AGOTADO</span>
                   ) : (
-                    <span className="text-green-600 font-bold uppercase tracking-wider">DISPONIBLE</span>
+                    <span className="text-emerald-600 font-black uppercase tracking-wider">DISPONIBLE</span>
                   )}
                 </div>
               </div>
@@ -365,9 +364,9 @@ function ProductoDetalle({ id }: { id: string }) {
 
         {/* SECCIÓN DE ETIQUETAS ADICIONALES DE COLORES */}
         {etiquetas.length > 0 && (
-          <div className="mt-16 pt-8 border-t border-gray-200">
-            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-4">Etiquetas</h3>
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-16 pt-8 border-t border-gray-200 text-center md:text-left">
+            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Etiquetas</h3>
+            <div className="flex flex-wrap justify-center md:justify-start gap-2">
               {etiquetas.map((tag, index) => (
                 <span key={`tag-${index}`} className={`${tag.color} text-[10px] font-bold uppercase tracking-wider px-4 py-2 rounded-full cursor-default shadow-sm`}>
                   {tag.texto}
@@ -377,29 +376,34 @@ function ProductoDetalle({ id }: { id: string }) {
           </div>
         )}
         
-        {/* SECCIÓN DE PRODUCTOS RELACIONADOS */}
+        {/* SECCIÓN DE PRODUCTOS RELACIONADOS (Bordes restaurados) */}
         {productosRelacionados.length > 0 && (
-          <div className="mt-20">
-            <h3 className="text-xl font-bold text-gray-900 uppercase tracking-widest mb-8 border-b pb-4">
-              Más de {producto.marca}
-            </h3>
+          <div className="mt-20 md:mt-28">
+            <div className="text-center md:text-left mb-10 px-4 md:px-0">
+              <h3 className="text-2xl md:text-3xl font-black text-gray-900 uppercase tracking-tight mb-2 border-none">
+                Más de {producto.marca}
+              </h3>
+              <div className="w-10 h-1 bg-black mx-auto md:mx-0 rounded-full"></div>
+            </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {productosRelacionados.map(rel => (
-                <Link href={`/producto/${rel.id}`} key={rel.id} className="group flex flex-col bg-white border border-gray-100 rounded-md p-4 hover:shadow-lg transition-shadow">
-                  <div className="relative h-40 mb-4 bg-gray-50 overflow-hidden">
+                <Link href={`/producto/${rel.id}`} key={rel.id} className="group flex flex-col bg-white border border-gray-100 rounded-3xl p-4 hover:shadow-[0_15px_35px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-500">
+                  <div className="relative h-40 md:h-48 mb-4 bg-[#F8F9FA] rounded-2xl overflow-hidden group-hover:bg-gray-100 transition-colors duration-500">
                     <Image 
                       src={rel.imagen_url} 
                       alt={rel.nombre} 
                       fill 
                       sizes="25vw"
-                      className="object-contain p-2 group-hover:scale-110 transition-transform duration-500" 
+                      className="object-contain p-4 group-hover:scale-110 group-hover:rotate-1 transition-transform duration-700 ease-out" 
                       unoptimized
                     />
                   </div>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">{rel.marca}</p>
-                  <h4 className="font-bold text-sm text-gray-900 leading-tight line-clamp-2 mb-2">{rel.nombre}</h4>
-                  <p className="text-rose-600 font-bold mt-auto text-sm">{rel.precio} Bs.</p>
+                  <div className="text-center px-1">
+                    <p className="text-[9px] md:text-[10px] text-gray-400 uppercase tracking-widest mb-1.5 font-bold">{rel.marca}</p>
+                    <h4 className="font-bold text-sm text-gray-900 leading-tight line-clamp-2 mb-2 group-hover:text-[#D30F30] transition-colors">{rel.nombre}</h4>
+                    <p className="text-gray-900 font-black mt-auto text-sm">{rel.precio} Bs.</p>
+                  </div>
                 </Link>
               ))}
             </div>
