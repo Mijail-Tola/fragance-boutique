@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
-// 🚀 COMPONENTE MÁGICO: Carrusel Infinito con Arrastre para Celular Y Computadora (PC)
+// 🚀 COMPONENTE MÁGICO PERFECCIONADO: Ruleta libre sin bloqueos
 const CarruselInfinito = ({ items }: { items: any[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -15,62 +15,69 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
     if (!slider) return;
 
     let animationId: number;
-    let isHovered = false;
+    let isInteracting = false;
     let isDragging = false;
     let startX: number;
     let scrollLeft: number;
-    let draggedDistance = 0; // Para saber si arrastró o solo hizo clic
+    let draggedDistance = 0; 
 
-    const scrollSpeed = 0.5;
+    // Velocidad constante del carrusel
+    const scrollSpeed = 0.8; 
 
-    // Motor de Giro Automático
     const play = () => {
-      if (!isHovered && !isDragging) {
-        if (slider.scrollLeft >= slider.scrollWidth / 2) {
-          slider.scrollLeft = 0;
-        } else {
-          slider.scrollLeft += scrollSpeed;
+      // Si nadie lo está tocando, que gire solo
+      if (!isInteracting && !isDragging) {
+        slider.scrollLeft += scrollSpeed;
+      }
+
+      // LA MAGIA DEL BUCLE INFINITO INVISIBLE
+      // Como tenemos 4 copias exactas, cuando llegamos a la mitad, retrocedemos silenciosamente 1 cuarto.
+      // Así nunca se acaba ni para adelante ni para atrás.
+      if (slider.scrollWidth > 0) {
+        const cuartoDePista = slider.scrollWidth / 4;
+        
+        if (slider.scrollLeft >= cuartoDePista * 2) {
+          slider.scrollLeft -= cuartoDePista;
+        } else if (slider.scrollLeft <= 0) {
+          slider.scrollLeft += cuartoDePista;
         }
       }
+
       animationId = requestAnimationFrame(play);
     };
 
     animationId = requestAnimationFrame(play);
 
-    // Eventos Táctiles (Celular)
-    const handleTouchStart = () => { isHovered = true; };
-    const handleTouchEnd = () => { isHovered = false; };
+    // CONTROL TÁCTIL (Celulares)
+    const handleTouchStart = () => { isInteracting = true; };
+    const handleTouchEnd = () => { isInteracting = false; };
     
-    // Eventos de Ratón (Computadora / PC)
-    const handleMouseEnter = () => { isHovered = true; };
-    const handleMouseLeave = () => { 
-      isHovered = false; 
-      isDragging = false; 
-    };
-    
+    // CONTROL DE RATÓN (PC)
     const handleMouseDown = (e: MouseEvent) => {
-      isHovered = true;
+      isInteracting = true;
       isDragging = true;
-      draggedDistance = 0; // Reiniciamos la distancia
+      draggedDistance = 0;
       startX = e.pageX - slider.offsetLeft;
       scrollLeft = slider.scrollLeft;
+      slider.style.cursor = 'grabbing';
     };
     
-    const handleMouseUp = () => {
-      isHovered = false;
+    const handleMouseUpOrLeave = () => {
+      isInteracting = false;
       isDragging = false;
+      slider.style.cursor = 'grab';
     };
     
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       e.preventDefault(); 
       const x = e.pageX - slider.offsetLeft;
-      draggedDistance = Math.abs(x - startX); // Medimos cuánto movió el ratón
-      const walk = (x - startX) * 1.5; // Multiplicador de velocidad de arrastre manual
+      draggedDistance = Math.abs(x - startX);
+      const walk = (x - startX) * 1.8; // Sensibilidad del arrastre manual
       slider.scrollLeft = scrollLeft - walk;
     };
 
-    // Prevenir que haga clic en el link de un perfume si el usuario solo estaba girando la ruleta
+    // Evitar que abra el producto si solo estábamos arrastrando
     const handleClick = (e: MouseEvent) => {
       if (draggedDistance > 5) {
         e.preventDefault();
@@ -78,13 +85,13 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
       }
     };
 
+    // Asignación de eventos
     slider.addEventListener('touchstart', handleTouchStart, { passive: true });
     slider.addEventListener('touchend', handleTouchEnd);
     
-    slider.addEventListener('mouseenter', handleMouseEnter);
-    slider.addEventListener('mouseleave', handleMouseLeave);
     slider.addEventListener('mousedown', handleMouseDown);
-    slider.addEventListener('mouseup', handleMouseUp);
+    slider.addEventListener('mouseleave', handleMouseUpOrLeave);
+    slider.addEventListener('mouseup', handleMouseUpOrLeave);
     slider.addEventListener('mousemove', handleMouseMove);
     slider.addEventListener('click', handleClick, { capture: true });
 
@@ -93,10 +100,9 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
       if (slider) {
         slider.removeEventListener('touchstart', handleTouchStart);
         slider.removeEventListener('touchend', handleTouchEnd);
-        slider.removeEventListener('mouseenter', handleMouseEnter);
-        slider.removeEventListener('mouseleave', handleMouseLeave);
         slider.removeEventListener('mousedown', handleMouseDown);
-        slider.removeEventListener('mouseup', handleMouseUp);
+        slider.removeEventListener('mouseleave', handleMouseUpOrLeave);
+        slider.removeEventListener('mouseup', handleMouseUpOrLeave);
         slider.removeEventListener('mousemove', handleMouseMove);
         slider.removeEventListener('click', handleClick, { capture: true });
       }
@@ -105,20 +111,21 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
 
   return (
     <div className="relative flex w-full overflow-hidden">
-      {/* Sombras difuminadas en los bordes */}
+      {/* Sombras difuminadas en los bordes para que los perfumes "aparezcan" mágicamente */}
       <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
       
+      {/* QUITAMOS LAS CLASES SNAP PARA LIBERAR EL MOVIMIENTO */}
       <div 
         ref={scrollRef}
-        className="flex w-full overflow-x-auto gap-6 md:gap-12 px-4 hide-scroll cursor-grab active:cursor-grabbing"
+        className="flex w-full overflow-x-auto gap-6 md:gap-12 px-4 hide-scroll cursor-grab"
         style={{ scrollBehavior: 'auto' }}
       >
         {items.map((p, i) => (
           <Link 
             href={`/producto/${p.id}`} 
             key={`${p.id}-${i}`} 
-            draggable={false} // Evita que la imagen se arrastre como fantasma en PC
+            draggable={false} 
             className="flex flex-col items-center group w-24 md:w-32 shrink-0 my-4 select-none"
           >
             <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-3 p-3 md:p-4 border border-gray-100 group-hover:border-black group-hover:shadow-md transition-all duration-300 pointer-events-none">
@@ -261,7 +268,7 @@ export default function Home() {
       if (recData.data) setProductosRecientes(recData.data);
       if (tendData.data) setProductosTendencia(tendData.data);
       if (catData.data) {
-        // Cuadruplicamos el array para asegurar que el scroll infinito tenga suficiente pista visual
+        // Cuadruplicamos la data para que el loop matemático tenga pista para resetearse
         setItemsMarquee([...catData.data, ...catData.data, ...catData.data, ...catData.data]);
       }
     }
@@ -308,12 +315,10 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        
-        {/* Efecto de luz superior */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL GIRATORIO E INTERACTIVO (Rueda mágica para PC y Celular) */}
+      {/* CARRUSEL GIRATORIO E INTERACTIVO (Ruleta Libre para PC y Celular) */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100">
           <div className="text-center mb-6 px-4">
@@ -348,37 +353,16 @@ export default function Home() {
       {/* SECCIÓN "ISLA" MODO BESTIA! */}
       <section className="w-full px-4 py-8 md:py-16">
         <div className="max-w-6xl mx-auto rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row group transition-transform duration-500 hover:shadow-3xl">
-          
           <div className="w-full md:w-1/2 bg-gradient-to-br from-[#0f0205] to-[#3a0b16] p-10 md:p-16 lg:p-20 text-center md:text-left flex flex-col justify-center relative overflow-hidden">
-            <span className="inline-block self-center md:self-start py-1.5 px-4 rounded-full bg-white/10 text-white/90 text-[9px] font-bold uppercase tracking-widest mb-6 backdrop-blur-md border border-white/20 shadow-inner">
-              Selección Premium
-            </span>
-            <h2 className="text-4xl md:text-5xl lg:text-7xl font-black text-white uppercase leading-[0.9] mb-4 tracking-tight drop-shadow-lg relative z-10">
-              Modo<br/>Bestia!
-            </h2>
-            <p className="text-rose-100/70 font-medium text-sm md:text-base mb-8 leading-relaxed max-w-sm mx-auto md:mx-0 relative z-10">
-              Descubre la línea árabe más viral del momento. Proyección extrema y duración que conquista.
-            </p>
-            <Link href="/catalogo?categoria=Árabe" className="self-center md:self-start inline-block bg-white text-black font-black uppercase tracking-widest text-xs px-8 py-4 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.15)] relative z-10">
-              Descubrir Ahora
-            </Link>
+            <span className="inline-block self-center md:self-start py-1.5 px-4 rounded-full bg-white/10 text-white/90 text-[9px] font-bold uppercase tracking-widest mb-6 backdrop-blur-md border border-white/20 shadow-inner">Selección Premium</span>
+            <h2 className="text-4xl md:text-5xl lg:text-7xl font-black text-white uppercase leading-[0.9] mb-4 tracking-tight drop-shadow-lg relative z-10">Modo<br/>Bestia!</h2>
+            <p className="text-rose-100/70 font-medium text-sm md:text-base mb-8 leading-relaxed max-w-sm mx-auto md:mx-0 relative z-10">Descubre la línea árabe más viral del momento. Proyección extrema y duración que conquista.</p>
+            <Link href="/catalogo?categoria=Árabe" className="self-center md:self-start inline-block bg-white text-black font-black uppercase tracking-widest text-xs px-8 py-4 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.15)] relative z-10">Descubrir Ahora</Link>
           </div>
-          
           <div className="w-full md:w-1/2 bg-white h-[350px] md:h-auto relative flex items-center justify-center p-8 transition-colors duration-500">
             <div className="absolute w-64 h-64 bg-gray-50 rounded-full scale-150 md:scale-110 group-hover:scale-125 transition-transform duration-1000 ease-out"></div>
-            
-            {productosRecientes[0] && (
-               <Image 
-                src={productosRecientes[0].imagen_url} 
-                alt="Promo" 
-                fill 
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-contain filter drop-shadow-2xl scale-110 md:scale-[1.15] animate-float p-12 z-10" 
-                unoptimized
-              />
-            )}
+            {productosRecientes[0] && <Image src={productosRecientes[0].imagen_url} alt="Promo" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain filter drop-shadow-2xl scale-110 md:scale-[1.15] animate-float p-12 z-10" unoptimized />}
           </div>
-          
         </div>
       </section>
 
@@ -388,45 +372,26 @@ export default function Home() {
           <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-gray-900 mb-3">En Tendencia Hoy</h2>
           <div className="w-12 h-1 bg-black mx-auto rounded-full"></div>
         </div>
-
         <div className="flex overflow-x-auto snap-x snap-mandatory hide-scroll gap-4 px-4 md:grid md:grid-cols-4 md:gap-6 pb-8 md:px-8">
-          {productosTendencia.map(prod => (
-            <div key={`tend-${prod.id}`} className="w-[75vw] sm:w-[45vw] md:w-auto shrink-0 snap-center">
-              <TarjetaProductoInicio producto={prod} />
-            </div>
-          ))}
+          {productosTendencia.map(prod => <div key={`tend-${prod.id}`} className="w-[75vw] sm:w-[45vw] md:w-auto shrink-0 snap-center"><TarjetaProductoInicio producto={prod} /></div>)}
         </div>
       </section>
 
       {/* SECCIÓN 3: BLOQUES POR GÉNERO */}
       <section className="max-w-7xl mx-auto px-4 pb-24">
-        <div className="text-center mb-10">
-          <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight text-gray-900">Encuentra tu esencia</h2>
-        </div>
-        
+        <div className="text-center mb-10"><h2 className="text-xl md:text-3xl font-black uppercase tracking-tight text-gray-900">Encuentra tu esencia</h2></div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 h-[600px] md:h-[400px]">
           <Link href="/catalogo?genero=Mujer" className="group relative flex items-center justify-center bg-rose-100 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-rose-200/50">
              <div className="absolute inset-0 bg-gradient-to-t from-rose-200/60 to-transparent group-hover:opacity-40 transition-opacity z-10"></div>
-             <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-700 ease-out">
-                <h3 className="text-2xl md:text-4xl font-black uppercase tracking-widest text-rose-900 mb-3 drop-shadow-sm">Mujer</h3>
-                <span className="bg-white/80 backdrop-blur-sm text-rose-900 text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full shadow-sm">Explorar</span>
-             </div>
+             <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-700 ease-out"><h3 className="text-2xl md:text-4xl font-black uppercase tracking-widest text-rose-900 mb-3 drop-shadow-sm">Mujer</h3><span className="bg-white/80 backdrop-blur-sm text-rose-900 text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full shadow-sm">Explorar</span></div>
           </Link>
-          
           <Link href="/catalogo?genero=Unisex" className="group relative flex items-center justify-center bg-gray-200 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 border border-gray-300/50">
              <div className="absolute inset-0 bg-gradient-to-t from-gray-300/60 to-transparent group-hover:opacity-40 transition-opacity z-10"></div>
-             <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-700 ease-out">
-                <h3 className="text-2xl md:text-4xl font-black uppercase tracking-widest text-gray-900 mb-3 drop-shadow-sm">Unisex</h3>
-                <span className="bg-white/90 backdrop-blur-sm text-gray-900 text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full shadow-sm">Explorar</span>
-             </div>
+             <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-700 ease-out"><h3 className="text-2xl md:text-4xl font-black uppercase tracking-widest text-gray-900 mb-3 drop-shadow-sm">Unisex</h3><span className="bg-white/90 backdrop-blur-sm text-gray-900 text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full shadow-sm">Explorar</span></div>
           </Link>
-          
           <Link href="/catalogo?genero=Hombre" className="group relative flex items-center justify-center bg-black rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500">
              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent group-hover:opacity-60 transition-opacity z-10"></div>
-             <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-700 ease-out">
-                <h3 className="text-2xl md:text-4xl font-black uppercase tracking-widest text-white mb-3 drop-shadow-sm">Hombre</h3>
-                <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full shadow-sm border border-white/20">Explorar</span>
-             </div>
+             <div className="z-20 text-center transform group-hover:scale-110 transition-transform duration-700 ease-out"><h3 className="text-2xl md:text-4xl font-black uppercase tracking-widest text-white mb-3 drop-shadow-sm">Hombre</h3><span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full shadow-sm border border-white/20">Explorar</span></div>
           </Link>
         </div>
       </section>
