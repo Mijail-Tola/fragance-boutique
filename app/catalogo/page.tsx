@@ -11,17 +11,30 @@ const ProductoCard = ({ producto }: { producto: any }) => {
   const sinStockGeneral = Number(producto.stock) <= 0;
   
   let insignias: {texto: string, color: string}[] = [];
+  let descuentoPorcentaje = 0;
+  
   if (producto.etiquetas) {
     try {
       if (producto.etiquetas.startsWith('[')) {
         const parsed = JSON.parse(producto.etiquetas);
-        insignias = parsed.filter((t: any) => t.tipo === 'insignia');
+        parsed.forEach((t: any) => {
+          if (t.tipo === 'top' || t.tipo === 'descuento') {
+            insignias.push({texto: t.texto, color: t.color});
+          }
+          if (t.tipo === 'descuento' && t.valor) {
+            descuentoPorcentaje = Math.max(descuentoPorcentaje, Number(t.valor));
+          }
+        });
       } else {
         const oldTags = producto.etiquetas.split(',').map((t: string) => t.trim());
         oldTags.forEach((t: string) => {
           const low = t.toLowerCase();
           if (low === 'top' || low === 'top ventas') insignias.push({texto: 'TOP', color: 'bg-black text-white'});
-          else if (t.includes('%')) insignias.push({texto: t, color: 'bg-[#e50000] text-white'});
+          else if (t.includes('%')) {
+            insignias.push({texto: t, color: 'bg-[#e50000] text-white'});
+            const match = t.match(/\d+/);
+            if (match) descuentoPorcentaje = Math.max(descuentoPorcentaje, parseInt(match[0]));
+          }
         });
       }
     } catch(e) {}
@@ -65,9 +78,15 @@ const ProductoCard = ({ producto }: { producto: any }) => {
     } catch(e) {}
   }
 
+  const factorDescuento = descuentoPorcentaje > 0 ? (1 - descuentoPorcentaje / 100) : 1;
+  const minPrecioFinal = Math.round(minPrecio * factorDescuento);
+  const maxPrecioFinal = Math.round(maxPrecio * factorDescuento);
+
   const mostrarAgotadoEnPortada = sinStockGeneral || todosTamanosAgotados;
   const mostrarRango = minPrecio > 0 && maxPrecio > 0 && minPrecio !== maxPrecio;
-  const precioActual = mostrarRango ? `${minPrecio}Bs. - ${maxPrecio}Bs.` : `${producto.precio}Bs.`;
+  
+  const precioOriginalTxt = mostrarRango ? `${minPrecio}Bs. - ${maxPrecio}Bs.` : `${minPrecio}Bs.`;
+  const precioFinalTxt = mostrarRango ? `${minPrecioFinal}Bs. - ${maxPrecioFinal}Bs.` : `${minPrecioFinal}Bs.`;
 
   const imagenPrincipal = producto.imagen_url;
   const imagenSecundaria = producto.galeria && producto.galeria.length > 1 ? producto.galeria[1] : producto.imagen_url;
@@ -113,9 +132,14 @@ const ProductoCard = ({ producto }: { producto: any }) => {
         <h4 className="font-bold text-gray-900 text-sm md:text-base mb-2 group-hover:text-[#D30F30] transition-colors leading-snug line-clamp-2">
           {producto.nombre}
         </h4>
-        <div className="mt-auto pt-2">
+        <div className="mt-auto pt-2 flex flex-col items-center justify-end min-h-[3rem]">
+          {descuentoPorcentaje > 0 && (
+            <span className="text-[10px] md:text-xs text-gray-400 line-through decoration-gray-400 mb-0.5">
+              {precioOriginalTxt}
+            </span>
+          )}
           <span className={`inline-block text-base md:text-lg font-black tracking-tight ${mostrarAgotadoEnPortada ? 'text-gray-400' : 'text-gray-900 group-hover:text-[#D30F30] transition-colors'}`}>
-            {precioActual}
+            {precioFinalTxt}
           </span>
         </div>
       </div>
@@ -182,36 +206,47 @@ export default function CatalogoPage() {
     return pasaCategoria && pasaMarca && pasaBusqueda
   })
 
-  const getMinPrice = (producto: any) => {
+  const getMinPriceWithDiscount = (producto: any) => {
+    let minP = Number(producto.precio) || 0;
     if (producto.tamano) {
       try {
         if (producto.tamano.startsWith('[')) {
           const vars = JSON.parse(producto.tamano);
           const precios = vars.map((v: any) => v.precio).filter((p: number) => p > 0);
-          if (precios.length > 0) return Math.min(...precios);
+          if (precios.length > 0) minP = Math.min(...precios);
         } else if (producto.tamano.includes(':')) {
           const precios = producto.tamano.split(',').map((item: string) => Number(item.split(':')[1]?.trim())).filter((p: number) => !isNaN(p));
-          if (precios.length > 0) return Math.min(...precios);
+          if (precios.length > 0) minP = Math.min(...precios);
         }
       } catch(e) {}
     }
-    return Number(producto.precio) || 0;
+    let desc = 0;
+    if (producto.etiquetas) {
+       try {
+         if (producto.etiquetas.startsWith('[')) {
+            JSON.parse(producto.etiquetas).forEach((t: any) => {
+               if (t.tipo === 'descuento' && t.valor) desc = Math.max(desc, Number(t.valor));
+            });
+         }
+       } catch(e){}
+    }
+    return Math.round(minP * (1 - desc / 100));
   }
 
   let productosOrdenados = [...productosFiltrados];
   switch (ordenFiltro) {
     case 'destacados':
       productosOrdenados.sort((a, b) => {
-        const aTop = a.etiquetas && (a.etiquetas.toLowerCase().includes('top') || a.etiquetas.includes('"texto":"TOP"')) ? 1 : 0;
-        const bTop = b.etiquetas && (b.etiquetas.toLowerCase().includes('top') || b.etiquetas.includes('"texto":"TOP"')) ? 1 : 0;
+        const aTop = a.etiquetas && (a.etiquetas.toLowerCase().includes('"tipo":"top"') || a.etiquetas.includes('TOP')) ? 1 : 0;
+        const bTop = b.etiquetas && (b.etiquetas.toLowerCase().includes('"tipo":"top"') || b.etiquetas.includes('TOP')) ? 1 : 0;
         return bTop - aTop; 
       });
       break;
     case 'precio_asc':
-      productosOrdenados.sort((a, b) => getMinPrice(a) - getMinPrice(b));
+      productosOrdenados.sort((a, b) => getMinPriceWithDiscount(a) - getMinPriceWithDiscount(b));
       break;
     case 'precio_desc':
-      productosOrdenados.sort((a, b) => getMinPrice(b) - getMinPrice(a));
+      productosOrdenados.sort((a, b) => getMinPriceWithDiscount(b) - getMinPriceWithDiscount(a));
       break;
     case 'az':
       productosOrdenados.sort((a, b) => a.nombre.localeCompare(b.nombre));

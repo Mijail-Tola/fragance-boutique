@@ -1,24 +1,167 @@
+"use client"
+
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
-export const dynamic = 'force-dynamic'
+// 🚀 COMPONENTE MÁGICO: Carrusel Infinito con Arrastre para Celular Y Computadora (PC)
+const CarruselInfinito = ({ items }: { items: any[] }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-// TARJETA DE PRODUCTO IPHONE STYLE
+  useEffect(() => {
+    const slider = scrollRef.current;
+    if (!slider) return;
+
+    let animationId: number;
+    let isHovered = false;
+    let isDragging = false;
+    let startX: number;
+    let scrollLeft: number;
+    let draggedDistance = 0; // Para saber si arrastró o solo hizo clic
+
+    const scrollSpeed = 0.5;
+
+    // Motor de Giro Automático
+    const play = () => {
+      if (!isHovered && !isDragging) {
+        if (slider.scrollLeft >= slider.scrollWidth / 2) {
+          slider.scrollLeft = 0;
+        } else {
+          slider.scrollLeft += scrollSpeed;
+        }
+      }
+      animationId = requestAnimationFrame(play);
+    };
+
+    animationId = requestAnimationFrame(play);
+
+    // Eventos Táctiles (Celular)
+    const handleTouchStart = () => { isHovered = true; };
+    const handleTouchEnd = () => { isHovered = false; };
+    
+    // Eventos de Ratón (Computadora / PC)
+    const handleMouseEnter = () => { isHovered = true; };
+    const handleMouseLeave = () => { 
+      isHovered = false; 
+      isDragging = false; 
+    };
+    
+    const handleMouseDown = (e: MouseEvent) => {
+      isHovered = true;
+      isDragging = true;
+      draggedDistance = 0; // Reiniciamos la distancia
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    };
+    
+    const handleMouseUp = () => {
+      isHovered = false;
+      isDragging = false;
+    };
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault(); 
+      const x = e.pageX - slider.offsetLeft;
+      draggedDistance = Math.abs(x - startX); // Medimos cuánto movió el ratón
+      const walk = (x - startX) * 1.5; // Multiplicador de velocidad de arrastre manual
+      slider.scrollLeft = scrollLeft - walk;
+    };
+
+    // Prevenir que haga clic en el link de un perfume si el usuario solo estaba girando la ruleta
+    const handleClick = (e: MouseEvent) => {
+      if (draggedDistance > 5) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    slider.addEventListener('touchstart', handleTouchStart, { passive: true });
+    slider.addEventListener('touchend', handleTouchEnd);
+    
+    slider.addEventListener('mouseenter', handleMouseEnter);
+    slider.addEventListener('mouseleave', handleMouseLeave);
+    slider.addEventListener('mousedown', handleMouseDown);
+    slider.addEventListener('mouseup', handleMouseUp);
+    slider.addEventListener('mousemove', handleMouseMove);
+    slider.addEventListener('click', handleClick, { capture: true });
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      if (slider) {
+        slider.removeEventListener('touchstart', handleTouchStart);
+        slider.removeEventListener('touchend', handleTouchEnd);
+        slider.removeEventListener('mouseenter', handleMouseEnter);
+        slider.removeEventListener('mouseleave', handleMouseLeave);
+        slider.removeEventListener('mousedown', handleMouseDown);
+        slider.removeEventListener('mouseup', handleMouseUp);
+        slider.removeEventListener('mousemove', handleMouseMove);
+        slider.removeEventListener('click', handleClick, { capture: true });
+      }
+    };
+  }, []);
+
+  return (
+    <div className="relative flex w-full overflow-hidden">
+      {/* Sombras difuminadas en los bordes */}
+      <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
+      <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+      
+      <div 
+        ref={scrollRef}
+        className="flex w-full overflow-x-auto gap-6 md:gap-12 px-4 hide-scroll cursor-grab active:cursor-grabbing"
+        style={{ scrollBehavior: 'auto' }}
+      >
+        {items.map((p, i) => (
+          <Link 
+            href={`/producto/${p.id}`} 
+            key={`${p.id}-${i}`} 
+            draggable={false} // Evita que la imagen se arrastre como fantasma en PC
+            className="flex flex-col items-center group w-24 md:w-32 shrink-0 my-4 select-none"
+          >
+            <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-3 p-3 md:p-4 border border-gray-100 group-hover:border-black group-hover:shadow-md transition-all duration-300 pointer-events-none">
+              <div className="relative w-full h-full pointer-events-none">
+                <Image src={p.imagen_url} alt={p.nombre} fill sizes="150px" className="object-contain group-hover:scale-110 transition-transform duration-500" unoptimized draggable="false" />
+              </div>
+            </div>
+            <p className="text-[10px] md:text-[11px] font-bold text-center text-gray-900 truncate w-full group-hover:text-[#D30F30] transition-colors pointer-events-none">{p.nombre}</p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// TARJETA DE PRODUCTO IPHONE STYLE (CON LÓGICA DE DESCUENTOS Y TOPS)
 const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
   const sinStockGeneral = Number(producto.stock) <= 0;
   
   let insignias: {texto: string, color: string}[] = [];
+  let descuentoPorcentaje = 0; 
+  
   if (producto.etiquetas) {
     try {
       if (producto.etiquetas.startsWith('[')) {
-        insignias = JSON.parse(producto.etiquetas).filter((t: any) => t.tipo === 'insignia');
+        const parsed = JSON.parse(producto.etiquetas);
+        parsed.forEach((t: any) => {
+          if (t.tipo === 'top' || t.tipo === 'descuento') {
+            insignias.push({texto: t.texto, color: t.color});
+          }
+          if (t.tipo === 'descuento' && t.valor) {
+            descuentoPorcentaje = Math.max(descuentoPorcentaje, Number(t.valor));
+          }
+        });
       } else {
         producto.etiquetas.split(',').forEach((t: string) => {
           const text = t.trim();
           if (text.toLowerCase().includes('top')) insignias.push({texto: 'TOP', color: 'bg-black text-white'});
-          else if (text.includes('%')) insignias.push({texto: text, color: 'bg-[#e50000] text-white'});
+          else if (text.includes('%')) {
+            insignias.push({texto: text, color: 'bg-[#e50000] text-white'});
+            const match = text.match(/\d+/);
+            if (match) descuentoPorcentaje = Math.max(descuentoPorcentaje, parseInt(match[0]));
+          }
         });
       }
     } catch(e) {}
@@ -48,8 +191,15 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
     } catch(e) {}
   }
 
+  const factorDescuento = descuentoPorcentaje > 0 ? (1 - descuentoPorcentaje / 100) : 1;
+  const minPrecioFinal = Math.round(minPrecio * factorDescuento);
+  const maxPrecioFinal = Math.round(maxPrecio * factorDescuento);
+
   const mostrarAgotado = sinStockGeneral || todosAgotados;
-  const precioActual = minPrecio !== maxPrecio ? `${minPrecio}Bs. - ${maxPrecio}Bs.` : `${minPrecio}Bs.`;
+  const mostrarRango = minPrecio > 0 && maxPrecio > 0 && minPrecio !== maxPrecio;
+  
+  const precioOriginalTxt = mostrarRango ? `${minPrecio} - ${maxPrecio} Bs.` : `${minPrecio} Bs.`;
+  const precioFinalTxt = mostrarRango ? `${minPrecioFinal} - ${maxPrecioFinal} Bs.` : `${minPrecioFinal} Bs.`;
 
   return (
     <Link href={`/producto/${producto.id}`} className="group flex flex-col relative bg-white p-3 md:p-5 rounded-3xl border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_15px_35px_rgb(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-500 ease-out h-full">
@@ -79,28 +229,44 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
         <h4 className="font-bold text-gray-900 text-sm md:text-base mb-3 group-hover:text-[#D30F30] transition-colors line-clamp-2 leading-tight">
           {producto.nombre}
         </h4>
-        <p className="mt-auto font-black text-gray-900 text-base md:text-lg">
-          {precioActual}
-        </p>
+        <div className="mt-auto pt-2 flex flex-col items-center justify-end min-h-[3.5rem]">
+          {descuentoPorcentaje > 0 && (
+            <span className="text-[10px] md:text-xs text-gray-400 line-through decoration-gray-400 mb-0.5">
+              {precioOriginalTxt}
+            </span>
+          )}
+          <span className={`inline-block text-base md:text-lg font-black tracking-tight ${mostrarAgotado ? 'text-gray-400' : 'text-gray-900 group-hover:text-[#D30F30] transition-colors'}`}>
+            {precioFinalTxt}
+          </span>
+        </div>
       </div>
     </Link>
   )
 }
 
-export default async function Home() {
+export default function Home() {
   
-  // Peticiones al servidor
-  const { data: recienLlegados } = await supabase.from('productos').select('*').order('created_at', { ascending: false }).limit(8)
-  const { data: tendencias } = await supabase.from('productos').select('*').order('precio', { ascending: false }).limit(8)
-  
-  // Para el carrusel infinito buscamos hasta 15 perfumes
-  const { data: catalogoCompleto } = await supabase.from('productos').select('id, nombre, marca, imagen_url').limit(15)
+  const [productosRecientes, setProductosRecientes] = useState<any[]>([])
+  const [productosTendencia, setProductosTendencia] = useState<any[]>([])
+  const [itemsMarquee, setItemsMarquee] = useState<any[]>([])
 
-  const productosRecientes = recienLlegados || []
-  const productosTendencia = tendencias || []
-  
-  // Duplicamos el array para que el carrusel gire infinitamente sin cortarse
-  const itemsMarquee = [...(catalogoCompleto || []), ...(catalogoCompleto || [])]
+  useEffect(() => {
+    async function fetchData() {
+      const [recData, tendData, catData] = await Promise.all([
+        supabase.from('productos').select('*').order('created_at', { ascending: false }).limit(8),
+        supabase.from('productos').select('*').order('precio', { ascending: false }).limit(8),
+        supabase.from('productos').select('id, nombre, marca, imagen_url').limit(15)
+      ]);
+
+      if (recData.data) setProductosRecientes(recData.data);
+      if (tendData.data) setProductosTendencia(tendData.data);
+      if (catData.data) {
+        // Cuadruplicamos el array para asegurar que el scroll infinito tenga suficiente pista visual
+        setItemsMarquee([...catData.data, ...catData.data, ...catData.data, ...catData.data]);
+      }
+    }
+    fetchData();
+  }, [])
 
   return (
     <main className="min-h-screen bg-[#FDFDFD] font-sans text-gray-900 overflow-x-hidden">
@@ -120,13 +286,6 @@ export default async function Home() {
         .animate-fade-up { opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
         .delay-100 { animation-delay: 100ms; }
         .delay-200 { animation-delay: 200ms; }
-        
-        @keyframes marquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee { animation: marquee 40s linear infinite; }
-        .animate-marquee:hover { animation-play-state: paused; }
         
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
@@ -154,30 +313,13 @@ export default async function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL INFINITO (Marquee - Nueva Vida) */}
+      {/* CARRUSEL GIRATORIO E INTERACTIVO (Rueda mágica para PC y Celular) */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100">
           <div className="text-center mb-6 px-4">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Toda nuestra colección</h2>
           </div>
-          <div className="relative flex w-full overflow-hidden">
-            {/* Sombras a los bordes para difuminar entrada y salida */}
-            <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
-            
-            <div className="flex w-max animate-marquee gap-6 md:gap-12 px-4">
-              {itemsMarquee.map((p, i) => (
-                <Link href={`/producto/${p.id}`} key={`${p.id}-${i}`} className="flex flex-col items-center group w-24 md:w-32 shrink-0">
-                  <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-3 p-3 md:p-4 border border-gray-100 group-hover:border-gray-300 group-hover:shadow-md transition-all duration-300">
-                    <div className="relative w-full h-full">
-                      <Image src={p.imagen_url} alt={p.nombre} fill sizes="150px" className="object-contain group-hover:scale-110 transition-transform duration-500" unoptimized/>
-                    </div>
-                  </div>
-                  <p className="text-[10px] md:text-[11px] font-bold text-center text-gray-900 truncate w-full group-hover:text-[#D30F30] transition-colors">{p.nombre}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <CarruselInfinito items={itemsMarquee} />
         </section>
       )}
 
@@ -203,11 +345,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* SECCIÓN "ISLA" MODO BESTIA! (Diseño Pantalla Dividida) */}
+      {/* SECCIÓN "ISLA" MODO BESTIA! */}
       <section className="w-full px-4 py-8 md:py-16">
         <div className="max-w-6xl mx-auto rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row group transition-transform duration-500 hover:shadow-3xl">
           
-          {/* MITAD OSCURA */}
           <div className="w-full md:w-1/2 bg-gradient-to-br from-[#0f0205] to-[#3a0b16] p-10 md:p-16 lg:p-20 text-center md:text-left flex flex-col justify-center relative overflow-hidden">
             <span className="inline-block self-center md:self-start py-1.5 px-4 rounded-full bg-white/10 text-white/90 text-[9px] font-bold uppercase tracking-widest mb-6 backdrop-blur-md border border-white/20 shadow-inner">
               Selección Premium
@@ -223,9 +364,7 @@ export default async function Home() {
             </Link>
           </div>
           
-          {/* MITAD CLARA (Soluciona a la perfección el problema del JPG con fondo blanco) */}
           <div className="w-full md:w-1/2 bg-white h-[350px] md:h-auto relative flex items-center justify-center p-8 transition-colors duration-500">
-            {/* Círculo decorativo suave que le da profundidad */}
             <div className="absolute w-64 h-64 bg-gray-50 rounded-full scale-150 md:scale-110 group-hover:scale-125 transition-transform duration-1000 ease-out"></div>
             
             {productosRecientes[0] && (
@@ -234,7 +373,6 @@ export default async function Home() {
                 alt="Promo" 
                 fill 
                 sizes="(max-width: 768px) 100vw, 50vw"
-                // El animate-float le da vida y el drop-shadow lo separa del fondo blanco
                 className="object-contain filter drop-shadow-2xl scale-110 md:scale-[1.15] animate-float p-12 z-10" 
                 unoptimized
               />
