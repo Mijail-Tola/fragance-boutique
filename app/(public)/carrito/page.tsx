@@ -7,35 +7,43 @@ import { supabase } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Image from 'next/image'
 
+// Definimos la interfaz estricta para el formulario del cliente
+interface ClienteForm {
+  nombre: string;
+  telefono: string;
+  ciudad: string;
+  direccion: string;
+  notas: string;
+}
+
 export default function CarritoPage() {
   const { items, removeItem, updateQuantity, clearCart } = useCartStore()
   
   // SEGURIDAD: Sanitizamos los precios y cantidades directamente en el cálculo 
-  // para evitar manipulaciones en el LocalStorage del navegador
   const total = items.reduce((sum, item) => {
     const precioLimpio = Math.max(0, Number(item.precio) || 0);
     const cantidadLimpia = Math.max(1, Number(item.cantidad) || 1);
     return sum + (precioLimpio * cantidadLimpia);
   }, 0);
   
-  const [cliente, setCliente] = useState({
+  // Aplicamos la interfaz al estado local
+  const [cliente, setCliente] = useState<ClienteForm>({
     nombre: '', telefono: '', ciudad: 'Cochabamba', direccion: '', notas: ''
   })
 
-  const [mostrarQR, setMostrarQR] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [codigoOrden, setCodigoOrden] = useState('')
+  const [mostrarQR, setMostrarQR] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [codigoOrden, setCodigoOrden] = useState<string>('')
 
-  const procesarPedido = async (e: React.FormEvent) => {
+  // Tipado estricto para el evento del formulario HTML
+  const procesarPedido = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (loading) return // Prevención de doble clic
+    if (loading) return 
     setLoading(true)
 
-    // Generador de código único con fallback de seguridad
     const pedidoId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).substring(2, 15);
     const codigoGenerado = 'FB-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 
-    // 1. Guardar la orden maestra (Cabecera)
     const { error: errorPedido } = await supabase
       .from('pedidos')
       .insert([{
@@ -56,12 +64,11 @@ export default function CarritoPage() {
       return
     }
 
-    // 2. Guardar los items del pedido (Sanitizados)
     const itemsParaGuardar = items.map(item => ({
       pedido_id: pedidoId,
       producto_id: item.producto_id, 
-      cantidad: Math.max(1, Number(item.cantidad)), // Evitamos cantidades negativas falsas
-      precio_unitario: Math.max(0, Number(item.precio)), // Evitamos precios negativos falsos
+      cantidad: Math.max(1, Number(item.cantidad)), 
+      precio_unitario: Math.max(0, Number(item.precio)), 
     }))
 
     await supabase.from('pedido_items').insert(itemsParaGuardar)
@@ -102,10 +109,9 @@ export default function CarritoPage() {
 
     const url = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`
     window.open(url, '_blank')
-    clearCart() // Limpiamos el carrito al enviar el mensaje
+    clearCart() 
   }
 
-  // VISTA: CARRITO VACÍO (DISEÑO PREMIUM)
   if (items.length === 0 && !mostrarQR) {
     return (
       <main className="min-h-screen bg-[#FDFDFD] flex flex-col">
@@ -130,7 +136,6 @@ export default function CarritoPage() {
       
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-16">
         
-        {/* CABECERA */}
         <div className="mb-10 md:mb-16 text-center md:text-left">
           <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tight mb-3">
             Finalizar Compra
@@ -142,7 +147,6 @@ export default function CarritoPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
           
-          {/* COLUMNA IZQUIERDA: LISTA DE PRODUCTOS */}
           <section className="lg:col-span-7 flex flex-col gap-5">
             
             {!mostrarQR && (
@@ -160,7 +164,6 @@ export default function CarritoPage() {
                 return (
                   <div key={item.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-4 items-center bg-white p-4 md:p-5 rounded-3xl border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] group hover:shadow-[0_10px_30px_rgb(0,0,0,0.06)] transition-all">
                     
-                    {/* Foto y Título */}
                     <div className="md:col-span-6 flex items-center gap-4">
                       {!mostrarQR && (
                         <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors p-2 shrink-0" aria-label="Eliminar producto">
@@ -168,7 +171,6 @@ export default function CarritoPage() {
                         </button>
                       )}
                       <div className="w-20 h-20 bg-[#F8F9FA] rounded-2xl relative shrink-0 p-2 border border-gray-50 overflow-hidden">
-                        {/* MAGIA APLICADA: mix-blend-multiply borra los fondos blancos de los perfumes del carrito */}
                         <Image src={item.imagen_url || '/placeholder.png'} alt={item.nombre} fill className="object-contain mix-blend-multiply" unoptimized />
                       </div>
                       <div>
@@ -177,12 +179,10 @@ export default function CarritoPage() {
                       </div>
                     </div>
                     
-                    {/* Precio */}
                     <div className="hidden md:block md:col-span-2 text-center text-gray-500 font-bold text-sm">
                       {precio} Bs.
                     </div>
                     
-                    {/* Selector de Cantidad */}
                     <div className="md:col-span-2 flex justify-between md:justify-center items-center mt-2 md:mt-0">
                       <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Cantidad:</span>
                       {!mostrarQR ? (
@@ -196,7 +196,6 @@ export default function CarritoPage() {
                       )}
                     </div>
                     
-                    {/* Subtotal */}
                     <div className="md:col-span-2 flex justify-between md:justify-end items-center mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-0 border-gray-50">
                       <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Subtotal:</span>
                       <span className="font-black text-gray-900 text-base">{precio * item.cantidad} Bs.</span>
@@ -216,7 +215,6 @@ export default function CarritoPage() {
             )}
           </section>
 
-          {/* COLUMNA DERECHA: RESUMEN Y FORMULARIO / QR */}
           <section className="lg:col-span-5">
             <div className="bg-[#F8F9FA] p-6 md:p-8 rounded-[2.5rem] border border-gray-100 shadow-[0_15px_40px_rgb(0,0,0,0.04)] lg:sticky lg:top-28">
               
@@ -240,7 +238,6 @@ export default function CarritoPage() {
                 <span className="text-3xl font-black text-[#D30F30] tracking-tight">Bs. {total}</span>
               </div>
 
-              {/* FORMULARIO DE ENVÍO */}
               {!mostrarQR ? (
                 <form onSubmit={procesarPedido} className="flex flex-col gap-5">
                   <div>
@@ -280,8 +277,6 @@ export default function CarritoPage() {
                 </form>
 
               ) : (
-
-                /* VISTA DEL CÓDIGO QR Y WHATSAPP (DISEÑO TICKET PREMIUM) */
                 <div className="animate-in fade-in zoom-in duration-500 flex flex-col items-center">
                   
                   <div className="w-full bg-emerald-50 border border-emerald-100 rounded-3xl p-5 mb-8 text-center shadow-sm">
@@ -295,7 +290,6 @@ export default function CarritoPage() {
                   
                   <div className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-sm mb-8 relative">
                     <div className="absolute inset-4 border-2 border-dashed border-gray-100 rounded-[1.5rem] pointer-events-none"></div>
-                    {/* Aquí debes reemplazar la URL de la imagen por tu propio QR real */}
                     <img 
                       src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" 
                       alt="QR de Pago Fragance Boutique" 

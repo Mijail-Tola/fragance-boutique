@@ -1,13 +1,13 @@
+// app/(public)/HomeClient.tsx
 "use client"
 
-import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
+import { Producto } from '@/types'
 
 // 🚀 COMPONENTE MÁGICO: Vitrina Premium (Giro Infinito Autónomo)
-const CarruselInfinito = ({ items }: { items: any[] }) => {
+const CarruselInfinito = ({ items }: { items: Producto[] }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,57 +15,33 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
     if (!slider) return;
 
     let animationId: number;
-    // ACUMULADOR DE ALTA PRECISIÓN: Evita que Safari/Chrome redondeen a cero
     let exactScroll = slider.scrollLeft; 
-    
-    // Velocidad de giro (constante y elegante)
     const scrollSpeed = 0.6;
 
     const play = () => {
       exactScroll += scrollSpeed;
-
-      // Loop Infinito Matemático Invisible
       if (slider.scrollWidth > 0 && exactScroll >= slider.scrollWidth / 2) {
         exactScroll -= (slider.scrollWidth / 2);
       }
-      
-      // Obligamos al navegador a usar nuestra precisión
       slider.scrollLeft = exactScroll;
       animationId = requestAnimationFrame(play);
     };
 
-    // Pequeño retraso para que las imágenes WebP carguen y el cálculo de ancho sea perfecto
-    setTimeout(() => {
-      animationId = requestAnimationFrame(play);
-    }, 300);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
+    setTimeout(() => { animationId = requestAnimationFrame(play); }, 300);
+    return () => { cancelAnimationFrame(animationId); };
   }, []);
 
   return (
     <div className="relative flex w-full overflow-hidden">
-      {/* Sombras Laterales Difuminadas */}
       <div className="absolute left-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-16 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
       
-      {/* PISTA DEL CARRUSEL (Intocable gracias a overflow-hidden y touch-none) */}
-      <div 
-        ref={scrollRef}
-        className="flex w-full overflow-hidden gap-6 md:gap-12 px-8 md:px-16 select-none touch-none pointer-events-auto"
-      >
+      <div ref={scrollRef} className="flex w-full overflow-hidden gap-6 md:gap-12 px-8 md:px-16 select-none touch-none pointer-events-auto">
         {items.map((p, i) => (
-          <Link 
-            href={`/producto/${p.id}`} 
-            key={`${p.id}-${i}`} 
-            draggable={false} 
-            className="flex flex-col items-center group w-24 md:w-32 shrink-0 my-4"
-          >
+          <Link href={`/producto/${p.id}`} key={`${p.id}-${i}`} draggable={false} className="flex flex-col items-center group w-24 md:w-32 shrink-0 my-4">
             <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-[#F8F9FA] flex items-center justify-center mb-3 p-3 md:p-4 border border-gray-100 group-hover:border-black group-hover:shadow-md transition-all duration-300">
               <div className="relative w-full h-full pointer-events-none">
-                {/* MAGIA: mix-blend-multiply borra el fondo blanco de la imagen */}
-                <Image src={p.imagen_url} alt={p.nombre} fill sizes="150px" className="object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" unoptimized draggable="false" />
+                <Image src={p.imagen_url || '/placeholder.png'} alt={p.nombre} fill sizes="150px" className="object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500" unoptimized draggable="false" />
               </div>
             </div>
             <p className="text-[10px] md:text-[11px] font-bold text-center text-gray-900 truncate w-full group-hover:text-[#D30F30] transition-colors">{p.nombre}</p>
@@ -76,8 +52,8 @@ const CarruselInfinito = ({ items }: { items: any[] }) => {
   )
 }
 
-// TARJETA DE PRODUCTO IPHONE STYLE
-const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
+// TARJETA DE PRODUCTO IPHONE STYLE (CON HERENCIA DE PRECIO)
+const TarjetaProductoInicio = ({ producto }: { producto: Producto }) => {
   const sinStockGeneral = Number(producto.stock) <= 0;
   
   let insignias: {texto: string, color: string}[] = [];
@@ -86,14 +62,10 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
   if (producto.etiquetas) {
     try {
       if (producto.etiquetas.startsWith('[')) {
-        const parsed = JSON.parse(producto.etiquetas);
-        parsed.forEach((t: any) => {
-          if (t.tipo === 'top' || t.tipo === 'descuento') {
-            insignias.push({texto: t.texto, color: t.color});
-          }
-          if (t.tipo === 'descuento' && t.valor) {
-            descuentoPorcentaje = Math.max(descuentoPorcentaje, Number(t.valor));
-          }
+        const parsed = JSON.parse(producto.etiquetas) as { tipo: string, texto: string, color: string, valor?: string }[];
+        parsed.forEach((t) => {
+          if (t.tipo === 'top' || t.tipo === 'descuento') insignias.push({texto: t.texto, color: t.color});
+          if (t.tipo === 'descuento' && t.valor) descuentoPorcentaje = Math.max(descuentoPorcentaje, Number(t.valor));
         });
       } else {
         producto.etiquetas.split(',').forEach((t: string) => {
@@ -115,18 +87,39 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
 
   if (producto.tamano) {
     try {
-      let parsedVars: any[] = [];
-      if (producto.tamano.startsWith('[')) parsedVars = JSON.parse(producto.tamano);
-      else if (producto.tamano.includes(':')) parsedVars = producto.tamano.split(',').map((i: string) => ({ nombre: i.split(':')[0], precio: Number(i.split(':')[1]), agotado: false }));
+      type Variante = { nombre: string, precio: number, agotado?: boolean };
+      let parsedVars: Variante[] = [];
+      
+      // LA MAGIA DE LA HERENCIA: Si el precio viene nulo o 0, hereda el producto.precio
+      if (producto.tamano.startsWith('[')) {
+        const rawVars = JSON.parse(producto.tamano) as any[];
+        parsedVars = rawVars.map(v => ({
+          nombre: v.nombre,
+          precio: (v.precio && Number(v.precio) > 0) ? Number(v.precio) : Number(producto.precio),
+          agotado: v.agotado === true
+        }));
+      } else if (producto.tamano.includes(':')) {
+        parsedVars = producto.tamano.split(',').map((i: string) => {
+          const [nom, pre] = i.split(':');
+          const pNum = Number(pre?.trim());
+          return {
+            nombre: nom?.trim(),
+            precio: (pNum > 0) ? pNum : Number(producto.precio),
+            agotado: false
+          }
+        }).filter(v => v.nombre);
+      } else {
+        parsedVars = producto.tamano.split(',').map((i: string) => ({ nombre: i.trim(), precio: Number(producto.precio), agotado: false })).filter(v => v.nombre);
+      }
       
       if (parsedVars.length > 0) {
-        const disponibles = parsedVars.filter((v:any) => !v.agotado && v.precio > 0).map((v: any) => v.precio);
+        const disponibles = parsedVars.filter((v) => !v.agotado && v.precio > 0).map((v) => v.precio);
         if (disponibles.length > 0) {
           minPrecio = Math.min(...disponibles);
           maxPrecio = Math.max(...disponibles);
         } else {
           todosAgotados = true;
-          const todos = parsedVars.filter((v:any) => v.precio > 0).map((v: any) => v.precio);
+          const todos = parsedVars.filter((v) => v.precio > 0).map((v) => v.precio);
           if(todos.length > 0) { minPrecio = Math.min(...todos); maxPrecio = Math.max(...todos); }
         }
       }
@@ -153,9 +146,8 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
       </div>
       
       <div className="relative h-48 md:h-64 w-full bg-[#F8F9FA] rounded-[1.25rem] mb-5 overflow-hidden flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-500">
-        {/* MAGIA APLICADA AQUÍ: mix-blend-multiply borra el fondo blanco de las tarjetas */}
         <Image 
-          src={producto.imagen_url} 
+          src={producto.imagen_url || '/placeholder.png'} 
           alt={producto.nombre} 
           fill sizes="(max-width: 768px) 70vw, 25vw" unoptimized
           className={`object-contain mix-blend-multiply p-4 transition-transform duration-700 ease-out ${mostrarAgotado ? 'opacity-40' : 'group-hover:scale-110 group-hover:rotate-1'}`} 
@@ -187,79 +179,45 @@ const TarjetaProductoInicio = ({ producto }: { producto: any }) => {
   )
 }
 
-export default function Home() {
-  const [productosRecientes, setProductosRecientes] = useState<any[]>([])
-  const [productosTendencia, setProductosTendencia] = useState<any[]>([])
-  const [itemsMarquee, setItemsMarquee] = useState<any[]>([])
-
-  useEffect(() => {
-    async function fetchData() {
-      // LA DIETA DE DATOS: Protege la base de datos pidiendo solo lo esencial para las tarjetas
-      const camposBase = 'id, nombre, marca, precio, tamano, etiquetas, imagen_url, stock';
-
-      const [recData, tendData, catData] = await Promise.all([
-        supabase.from('productos').select(camposBase).order('created_at', { ascending: false }).limit(8),
-        supabase.from('productos').select(camposBase).order('precio', { ascending: false }).limit(8),
-        supabase.from('productos').select('id, nombre, marca, imagen_url').limit(15)
-      ]);
-
-      if (recData.data) setProductosRecientes(recData.data);
-      if (tendData.data) setProductosTendencia(tendData.data);
-      if (catData.data) {
-        // Cuadruplicamos el array para asegurar pista suficiente y loop invisible
-        setItemsMarquee([...catData.data, ...catData.data, ...catData.data, ...catData.data]);
-      }
-    }
-    fetchData();
-  }, [])
+// COMPONENTE PRINCIPAL CLIENTE
+export default function HomeClient({ 
+  productosRecientes, 
+  productosTendencia, 
+  itemsMarquee,
+  productoModoBestia // AHORA RECIBE CORRECTAMENTE EL PERFUME
+}: { 
+  productosRecientes: Producto[], 
+  productosTendencia: Producto[], 
+  itemsMarquee: Producto[],
+  productoModoBestia: Producto | null // TIPADO CORRECTAMENTE
+}) {
 
   return (
     <main className="min-h-screen bg-[#FDFDFD] font-sans text-gray-900 overflow-x-hidden">
       
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-12px); }
-        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
         .animate-float { animation: float 5s ease-in-out infinite; }
-        
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-up { opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
-        .delay-100 { animation-delay: 100ms; }
-        .delay-200 { animation-delay: 200ms; }
-        
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .delay-100 { animation-delay: 100ms; } .delay-200 { animation-delay: 200ms; }
+        .hide-scroll::-webkit-scrollbar { display: none; } .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
-
-      <Navbar />
 
       <section className="relative w-full bg-gradient-to-br from-[#D30F30] via-[#b80c29] to-[#80071b] py-20 md:py-36 flex items-center justify-center text-center px-4 overflow-hidden rounded-b-[2.5rem] md:rounded-b-[4rem] shadow-xl">
         <div className="max-w-4xl mx-auto z-10 relative">
-          <p className="animate-fade-up text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-4 text-white/90 drop-shadow-sm">
-            La verdadera esencia
-          </p>
-          <h1 className="animate-fade-up delay-100 text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[1.05] mb-10 uppercase drop-shadow-md">
-            Descubre las Tendencias del Mundo
-          </h1>
+          <p className="animate-fade-up text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-4 text-white/90 drop-shadow-sm">La verdadera esencia</p>
+          <h1 className="animate-fade-up delay-100 text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[1.05] mb-10 uppercase drop-shadow-md">Descubre las Tendencias del Mundo</h1>
           <div className="animate-fade-up delay-200">
-            <Link href="/catalogo" className="inline-block bg-white text-[#D30F30] font-black uppercase tracking-widest text-xs px-10 py-4 rounded-full hover:scale-105 hover:bg-gray-50 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.15)] duration-300">
-              Explorar Tienda
-            </Link>
+            <Link href="/catalogo" className="inline-block bg-white text-[#D30F30] font-black uppercase tracking-widest text-xs px-10 py-4 rounded-full hover:scale-105 hover:bg-gray-50 transition-all shadow-[0_10px_30px_rgba(0,0,0,0.15)] duration-300">Explorar Tienda</Link>
           </div>
         </div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white opacity-[0.07] rounded-full blur-[80px] pointer-events-none"></div>
       </section>
 
-      {/* CARRUSEL GIRATORIO "VITRINA PREMIUM" */}
       {itemsMarquee.length > 0 && (
         <section className="py-12 bg-white overflow-hidden border-b border-gray-100 relative">
-          <div className="text-center mb-6 px-4">
-            <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Toda nuestra colección</h2>
-          </div>
+          <div className="text-center mb-6 px-4"><h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Toda nuestra colección</h2></div>
           <CarruselInfinito items={itemsMarquee} />
         </section>
       )}
@@ -269,7 +227,6 @@ export default function Home() {
           <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-gray-900 mb-3">Recién Llegados</h2>
           <div className="w-12 h-1 bg-[#D30F30] mx-auto rounded-full"></div>
         </div>
-
         <div className="flex overflow-x-auto snap-x snap-mandatory hide-scroll gap-4 px-4 md:grid md:grid-cols-4 md:gap-6 pb-8 md:px-8">
           {productosRecientes.map(prod => (
             <div key={`new-${prod.id}`} className="w-[75vw] sm:w-[45vw] md:w-auto shrink-0 snap-center">
@@ -277,11 +234,8 @@ export default function Home() {
             </div>
           ))}
         </div>
-
         <div className="text-center mt-6">
-          <Link href="/catalogo" className="inline-block bg-white border border-gray-200 text-gray-800 font-bold uppercase tracking-widest text-xs px-8 py-3.5 rounded-full hover:border-black hover:bg-black hover:text-white transition-all shadow-sm">
-            Ver Todo el Catálogo
-          </Link>
+          <Link href="/catalogo" className="inline-block bg-white border border-gray-200 text-gray-800 font-bold uppercase tracking-widest text-xs px-8 py-3.5 rounded-full hover:border-black hover:bg-black hover:text-white transition-all shadow-sm">Ver Todo el Catálogo</Link>
         </div>
       </section>
 
@@ -295,8 +249,8 @@ export default function Home() {
           </div>
           <div className="w-full md:w-1/2 bg-white h-[350px] md:h-auto relative flex items-center justify-center p-8 transition-colors duration-500">
             <div className="absolute w-64 h-64 bg-gray-50 rounded-full scale-150 md:scale-110 group-hover:scale-125 transition-transform duration-1000 ease-out"></div>
-            {/* MAGIA: mix-blend-multiply para el frasco gigante del Modo Bestia */}
-            {productosRecientes[0] && <Image src={productosRecientes[0].imagen_url} alt="Promo" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain mix-blend-multiply filter drop-shadow-2xl scale-110 md:scale-[1.15] animate-float p-12 z-10" unoptimized />}
+            {/* SE MUESTRA EL PERFUME ÁRABE */}
+            {productoModoBestia && <Image src={productoModoBestia.imagen_url || '/placeholder.png'} alt="Promo Árabe" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-contain mix-blend-multiply filter drop-shadow-2xl scale-110 md:scale-[1.15] animate-float p-12 z-10" unoptimized />}
           </div>
         </div>
       </section>
